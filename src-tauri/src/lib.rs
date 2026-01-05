@@ -34,6 +34,7 @@ fn get_widgets(state: tauri::State<AppState>) -> Vec<WidgetConfig> {
 
 #[tauri::command]
 fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: String) {
+    println!("Backend: add_widget called with type: {}", w_type);
     let mut widgets = state.widgets.lock().unwrap();
     let id =  uuid::Uuid::new_v4().to_string();
     widgets.push(WidgetConfig {
@@ -41,11 +42,13 @@ fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: Stri
         w_type,
     });
     // Emit event to update frontend
+    println!("Backend: Emitting widgets-update with {} widgets", widgets.len());
     let _ = app.emit("widgets-update", widgets.clone());
 }
 
 #[tauri::command]
 fn remove_widget(app: tauri::AppHandle, state: tauri::State<AppState>, id: String) {
+    println!("Backend: remove_widget called with id: {}", id);
     let mut widgets = state.widgets.lock().unwrap();
     widgets.retain(|w| w.id != id);
     let _ = app.emit("widgets-update", widgets.clone());
@@ -79,7 +82,6 @@ pub fn run() {
             widgets: Arc::new(Mutex::new(vec![
                 // Default widgets
                 WidgetConfig { id: "default-clock".into(), w_type: "ClockWidget".into() },
-                WidgetConfig { id: "default-todo".into(), w_type: "TodoWidget".into() }
             ])),
         })
         .invoke_handler(tauri::generate_handler![greet, update_widget_rects, get_widgets, add_widget, remove_widget])
@@ -95,8 +97,15 @@ pub fn run() {
             let show_i = tauri::menu::MenuItem::with_id(app, "show_control", "Control Menu", true, None::<&str>).unwrap();
             let menu = tauri::menu::Menu::with_items(app, &[&show_i, &quit_i]).unwrap();
 
+            
+            let icon_img = image::load_from_memory(include_bytes!("../icons/tray.png"))
+                .expect("failed to load tray icon")
+                .into_rgba8();
+            let (width, height) = icon_img.dimensions();
+            let tray_icon = tauri::image::Image::new_owned(icon_img.into_vec(), width, height);
+
             let _tray = tauri::tray::TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(|app, event| {

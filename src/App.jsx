@@ -22,15 +22,14 @@ console.log("App.jsx: Detected Widgets:", Object.keys(WIDGET_COMPONENTS));
 
 function App() {
   const [isControlWindow, setIsControlWindow] = useState(false);
-  const [widgets, setWidgets] = useState([]); // List of active widgets
+  const [widgets, setWidgets] = useState([]);
 
   useEffect(() => {
     // Determine if we are in the control window
     const currentWindow = getCurrentWindow();
     if (currentWindow.label === "control") {
       setIsControlWindow(true);
-      document.body.style.backgroundColor = "#1e1e1e"; // Reset bg for control
-      document.body.style.overflow = "auto"; // Enable scroll
+      document.documentElement.style.backgroundColor = "#0a0a0a";
     } else {
       // We are in the widget layer. Fetch widgets.
       invoke("get_widgets").then(setWidgets);
@@ -78,7 +77,7 @@ function App() {
       observer.disconnect();
       clearInterval(interval);
     };
-  }, [widgets]); // Re-run when widgets change (new DOM elements)
+  }, [widgets]);
 
   if (isControlWindow) {
     return <ControlPanel />;
