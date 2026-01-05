@@ -30,7 +30,6 @@ function App() {
     if (currentWindow.label === "control") {
       setIsControlWindow(true);
       document.body.style.backgroundColor = "#1e1e1e"; // Reset bg for control
-      document.body.style.pointerEvents = "auto";
       document.body.style.overflow = "auto"; // Enable scroll
     } else {
       // We are in the widget layer. Fetch widgets.

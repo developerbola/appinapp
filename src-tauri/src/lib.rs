@@ -92,7 +92,7 @@ pub fn run() {
 
             // System Tray Setup
             let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).unwrap();
-            let show_i = tauri::menu::MenuItem::with_id(app, "show_control", "Available Widgets", true, None::<&str>).unwrap();
+            let show_i = tauri::menu::MenuItem::with_id(app, "show_control", "Control Menu", true, None::<&str>).unwrap();
             let menu = tauri::menu::Menu::with_items(app, &[&show_i, &quit_i]).unwrap();
 
             let _tray = tauri::tray::TrayIconBuilder::new()
@@ -125,6 +125,14 @@ pub fn run() {
                 let _ = control_window.set_resizable(false);
                 let _ = control_window.set_maximizable(false);
                 let _ = control_window.set_minimizable(false);
+
+                let control_window_handle = control_window.clone();
+                control_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = control_window_handle.hide();
+                    }
+                });
             }
 
             let app_handle = app.handle().clone();

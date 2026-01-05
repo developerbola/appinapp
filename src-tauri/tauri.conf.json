@@ -26,23 +26,30 @@
       },
       {
         "label": "control",
-        "title": "Widget Control",
+        "title": "Control Menu",
         "width": 600,
         "height": 500,
         "visible": false,
-        "decorations": true,
         "shadow": false,
         "transparent": false,
         "resizable": false,
         "maximizable": false,
         "minimizable": false,
-        "titleBarStyle": "Transparent",
+        "decorations": true,
+        "titleBarStyle": "Overlay",
         "hiddenTitle": true
       }
     ],
     "macOSPrivateApi": true,
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "draggable-window",
+          "windows": ["*"],
+          "permissions": ["core:window:allow-start-dragging"]
+        }
+      ]
     }
   },
   "bundle": {

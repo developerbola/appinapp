@@ -1,18 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Plus, Terminal, Activity, Zap, RefreshCw } from "lucide-react";
+import { Plus, Terminal, Activity, Zap, RefreshCw } from "lucide-react";
 
 // Dynamic Widget Imports
 const widgetModules = import.meta.glob("./widgets/*.jsx", { eager: true });
@@ -111,7 +105,13 @@ const ControlPanel = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10">
+    <div className="relative flex flex-col h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10 pt-[28px]">
+      <div
+        data-tauri-drag-region
+        id="titlebar"
+        className="fixed inset-0 h-[28px] bg-black/40 backdrop-blur-xl"
+      />
+
       {/* Navbar */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div className="flex items-center gap-3">
