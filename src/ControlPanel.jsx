@@ -188,11 +188,7 @@ const ControlPanel = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(widgetTypes).map(([type, meta]) => (
-                  <div
-                    key={type}
-                    className="bg-[#ffffff15]"
-                    // onClick={() => addWidget(type)}
-                  >
+                  <div key={type} className="bg-[#ffffff15]">
                     <div className="p-4 py-2 flex items-center gap-4">
                       <div className="flex-1">
                         <h3 className="font-bold text-sm tracking-tight">
@@ -206,12 +202,10 @@ const ControlPanel = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>Profile</DropdownMenuItem>
-                          <DropdownMenuItem>Billing</DropdownMenuItem>
-                          <DropdownMenuItem>Team</DropdownMenuItem>
-                          <DropdownMenuItem>Subscription</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => addWidget(type)}>
+                            Add
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>Remove</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       {/* <Plus className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" /> */}

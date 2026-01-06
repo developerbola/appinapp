@@ -38,8 +38,9 @@ fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: Stri
         .transparent(true)
         .decorations(false)
         .always_on_bottom(true)
-        .inner_size(400.0, 400.0) // Default size, might be adjusted by content
+        .maximized(true)
         .shadow(false)
+        .visible_on_all_workspaces(true)
         .build();
 
     println!("Backend: Emitting widgets-update with {} widgets", widgets.len());

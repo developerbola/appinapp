@@ -14,8 +14,8 @@
       {
         "label": "main",
         "title": "Appinapp",
-        "width": 800,
-        "height": 600,
+        "width": 2560,
+        "height": 1600,
         "transparent": true,
         "decorations": false,
         "shadow": false,

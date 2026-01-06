@@ -10,7 +10,7 @@ const ClockWidget = () => {
 
   return (
     <div
-      className="widget"
+      className="widget w-fit h-fit"
       style={{
         pointerEvents: "auto",
         top: "40px",

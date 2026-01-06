@@ -112,20 +112,8 @@ const WidgetHandler = ({ widgetInfo }) => {
 
   return (
     <ErrorBoundary name={widgetInfo.w_type}>
-      {module.className && (
-        <style>
-          {`
-            /* Global styles (keyframes, etc) */
-            ${module.className}
-            
-            /* Scoped/prefixed styles if needed, though we rely on container layout */
-            .widget-container.widget-${widgetInfo.w_type} {
-               /* any specific wrapper styles */
-            }
-          `}
-        </style>
-      )}
-      <div className={`widget-container widget-${widgetInfo.w_type}`}>
+      {module.className && <style>{`${module.className}`}</style>}
+      <div>
         <Component output={output} error={error} run={run} />
       </div>
     </ErrorBoundary>
@@ -153,8 +141,6 @@ function App() {
       listen("widgets-update", (event) => {
         setWidgets(event.payload);
       });
-    } else {
-      // Main window or others - usually hidden now per backend changes
     }
   }, []);
 
@@ -167,7 +153,7 @@ function App() {
     if (!widget) return null;
 
     return (
-      <div className="h-screen w-screen overflow-hidden bg-red-300!">
+      <div className="h-screen w-screen overflow-hidden bg-transparent pointer-events-none">
         <WidgetHandler widgetInfo={widget} />
       </div>
     );
