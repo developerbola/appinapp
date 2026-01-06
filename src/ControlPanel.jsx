@@ -4,18 +4,16 @@ import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Plus,
   Terminal,
   RefreshCw,
   Trash,
   EllipsisVertical,
+  Monitor,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -104,6 +102,15 @@ const ControlPanel = () => {
       await fetchWidgets();
     } catch (err) {
       console.error("Failed to remove widget:", err);
+    }
+  };
+
+  const toggleWidgetBackground = async (id, isBackground) => {
+    try {
+      await invoke("set_widget_background", { id, background: !isBackground });
+      await fetchWidgets();
+    } catch (err) {
+      console.error("Failed to toggle background:", err);
     }
   };
 
@@ -206,6 +213,9 @@ const ControlPanel = () => {
                             Add
                           </DropdownMenuItem>
                           <DropdownMenuItem>Remove</DropdownMenuItem>
+                          <DropdownMenuItem>
+                            Send to background
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       {/* <Plus className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" /> */}
@@ -226,9 +236,6 @@ const ControlPanel = () => {
                 {widgets.map((w) => {
                   const meta = widgetTypes[w.w_type] || {
                     label: "Unknown",
-                    icon: "❓",
-                    color: "#888",
-                    description: "Internal subprocess",
                   };
 
                   return (
@@ -272,14 +279,35 @@ const ControlPanel = () => {
                             })()}
                           </p>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className={"text-destructive border-none"}
-                          onClick={() => removeWidget(w.id)}
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className={`${
+                              w.is_background
+                                ? "text-blue-400 bg-blue-400/10"
+                                : "text-zinc-500"
+                            } border-none`}
+                            onClick={() =>
+                              toggleWidgetBackground(w.id, w.is_background)
+                            }
+                            title={
+                              w.is_background
+                                ? "Move to Foreground"
+                                : "Send to Background"
+                            }
+                          >
+                            <Monitor className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className={"text-destructive border-none"}
+                            onClick={() => removeWidget(w.id)}
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );

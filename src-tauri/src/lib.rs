@@ -7,8 +7,8 @@ use sysinfo::{System};
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 struct WidgetConfig {
     id: String,
-    w_type: String, // 'clock' or 'todo'
-    // Optional props could go here
+    w_type: String, 
+    is_background: bool,
 }
 
 struct AppState {
@@ -29,6 +29,7 @@ fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: Stri
     widgets.push(WidgetConfig {
         id: id.clone(),
         w_type: w_type.clone(),
+        is_background: false,
     });
     
     // Spawn a new window for the widget
@@ -37,13 +38,62 @@ fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: Stri
         .title(format!("Widget: {}", w_type))
         .transparent(true)
         .decorations(false)
+        .resizable(false)
         .always_on_bottom(true)
-        .maximized(true)
         .shadow(false)
         .visible_on_all_workspaces(true)
         .build();
 
     println!("Backend: Emitting widgets-update with {} widgets", widgets.len());
+    let _ = app.emit("widgets-update", widgets.clone());
+}
+
+#[tauri::command]
+fn set_widget_background(app: tauri::AppHandle, state: tauri::State<AppState>, id: String, background: bool) {
+    let mut widgets = state.widgets.lock().unwrap();
+    if let Some(w) = widgets.iter_mut().find(|w| w.id == id) {
+        w.is_background = background;
+        
+        if let Some(window) = app.get_webview_window(&format!("widget-{}", id)) {
+            let _ = window.set_ignore_cursor_events(background);
+            
+            #[cfg(target_os = "macos")]
+            {
+                use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+                use cocoa::base::id as cocoa_id;
+                
+                extern "C" {
+                    pub fn CGWindowLevelForKey(key: i32) -> i32;
+                }
+
+                let ns_window = window.ns_window().unwrap() as cocoa_id;
+                unsafe {
+                    if background {
+                        // kCGDesktopWindowLevelKey is 2
+                        let level = CGWindowLevelForKey(2);
+                        ns_window.setLevel_(level as i64);
+                        ns_window.setCollectionBehavior_(
+                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
+                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary |
+                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle
+                        );
+                    } else {
+                        // kCGFloatingWindowLevelKey is 3
+                        let level = CGWindowLevelForKey(3);
+                        ns_window.setLevel_(level as i64); 
+                        ns_window.setCollectionBehavior_(
+                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorDefault
+                        );
+                    }
+                }
+            }
+            
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = window.set_always_on_bottom(background);
+            }
+        }
+    }
     let _ = app.emit("widgets-update", widgets.clone());
 }
 
@@ -104,10 +154,6 @@ fn get_app_stats(state: tauri::State<AppState>) -> serde_json::Value {
     })
 }
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[tauri::command]
 async fn execute_command(command: String) -> Result<String, String> {
@@ -138,7 +184,7 @@ pub fn run() {
             widgets: Arc::new(Mutex::new(vec![])),
             sys: Arc::new(Mutex::new(System::new_all())),
         })
-        .invoke_handler(tauri::generate_handler![greet, get_widgets, add_widget, remove_widget, get_app_stats, execute_command])
+        .invoke_handler(tauri::generate_handler![get_widgets, add_widget, remove_widget, get_app_stats, execute_command, set_widget_background])
         .setup(move |app| {
             // Set Activation Policy to Accessory (hides dock icon)
             #[cfg(target_os = "macos")]

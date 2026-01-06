@@ -81,10 +81,10 @@
 
 html,
 body {
-  width: 100vw;
-  min-height: 100vh;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  background-color: var(--background);
+  background-color: transparent !important;
 }
 
 #root {
@@ -92,13 +92,8 @@ body {
 }
 
 .widget {
-  position: relative; /* Changed from absolute */
+  position: relative;
   pointer-events: auto;
   transform: translateZ(0);
   will-change: backdrop-filter;
-  cursor: grab;
-}
-
-.widget:active {
-  cursor: grabbing;
 }

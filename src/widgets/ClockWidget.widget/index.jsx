@@ -13,8 +13,6 @@ const ClockWidget = () => {
       className="widget w-fit h-fit"
       style={{
         pointerEvents: "auto",
-        top: "40px",
-        left: "40px",
         color: "#fff",
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
         background: "#111",
@@ -54,5 +52,8 @@ const ClockWidget = () => {
     </div>
   );
 };
+
+export const windowTop = 10000;
+export const windowLeft = 10000;
 
 export default ClockWidget;

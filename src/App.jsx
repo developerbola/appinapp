@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useCallback,
   Component as ReactComponent,
+  useMemo,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -14,11 +15,7 @@ const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
 });
 
-const ALL_WIDGETS = Object.keys(widgetModules).reduce((acc, path) => {
-  const name = path.split("/")[2].replace(".widget", "");
-  acc[name] = widgetModules[path];
-  return acc;
-}, {});
+const ALL_WIDGETS = {}; // Placeholder if needed, but we'll remove usage below
 
 class ErrorBoundary extends ReactComponent {
   constructor(props) {
@@ -57,16 +54,18 @@ class ErrorBoundary extends ReactComponent {
   }
 }
 
-const WidgetHandler = ({ widgetInfo }) => {
-  const module = ALL_WIDGETS[widgetInfo.w_type];
+const WidgetHandler = ({ widgetInfo, module }) => {
   if (!module) return null;
 
   const Component = module.default;
   const command = module.command;
   const refreshFrequency = module.refreshFrequency;
+  const windowTop = module.windowTop;
+  const windowLeft = module.windowLeft;
 
   const [output, setOutput] = useState("");
   const [error, setError] = useState(null);
+  const containerRef = React.useRef(null);
 
   const run = useCallback(async (cmd) => {
     try {
@@ -76,6 +75,37 @@ const WidgetHandler = ({ widgetInfo }) => {
       throw err;
     }
   }, []);
+
+  useEffect(() => {
+    const currentWindow = getCurrentWindow();
+
+    // Set initial position if provided by widget
+    // We check for number type specifically to allow 0
+    if (typeof windowTop === "number" && typeof windowLeft === "number") {
+      import("@tauri-apps/api/dpi").then(({ LogicalPosition }) => {
+        currentWindow.setPosition(new LogicalPosition(windowLeft, windowTop));
+      });
+    }
+
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(async (entries) => {
+      for (let entry of entries) {
+        const { inlineSize, blockSize } = entry.borderBoxSize[0] || {
+          inlineSize: entry.contentRect.width,
+          blockSize: entry.contentRect.height,
+        };
+
+        if (inlineSize > 0 && blockSize > 0) {
+          const { LogicalSize } = await import("@tauri-apps/api/dpi");
+          await currentWindow.setSize(new LogicalSize(inlineSize, blockSize));
+        }
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [windowTop, windowLeft]);
 
   useEffect(() => {
     if (!command) return;
@@ -113,7 +143,7 @@ const WidgetHandler = ({ widgetInfo }) => {
   return (
     <ErrorBoundary name={widgetInfo.w_type}>
       {module.className && <style>{`${module.className}`}</style>}
-      <div>
+      <div ref={containerRef} style={{ display: "inline-block" }}>
         <Component output={output} error={error} run={run} />
       </div>
     </ErrorBoundary>
@@ -124,6 +154,15 @@ function App() {
   const [isControlWindow, setIsControlWindow] = useState(false);
   const [widgetId, setWidgetId] = useState(null);
   const [widgets, setWidgets] = useState([]);
+
+  // Memoize widgets to handle HMR correctly
+  const widgetsData = useMemo(() => {
+    return Object.keys(widgetModules).reduce((acc, path) => {
+      const name = path.split("/")[2].replace(".widget", "");
+      acc[name] = widgetModules[path];
+      return acc;
+    }, {});
+  }, []);
 
   useEffect(() => {
     const currentWindow = getCurrentWindow();
@@ -152,9 +191,11 @@ function App() {
     const widget = widgets.find((w) => w.id === widgetId);
     if (!widget) return null;
 
+    const module = widgetsData[widget.w_type];
+
     return (
-      <div className="h-screen w-screen overflow-hidden bg-transparent pointer-events-none">
-        <WidgetHandler widgetInfo={widget} />
+      <div className="overflow-hidden bg-transparent pointer-events-none">
+        <WidgetHandler widgetInfo={widget} module={module} />
       </div>
     );
   }
