@@ -13,21 +13,21 @@
     "windows": [
       {
         "label": "main",
-        "title": "Übersicht Clone",
+        "title": "Appinapp",
         "width": 800,
         "height": 600,
         "transparent": true,
         "decorations": false,
         "shadow": false,
         "resizable": false,
+        "maximized": true,
         "visible": true,
-        "alwaysOnBottom": true,
         "visibleOnAllWorkspaces": true
       },
       {
         "label": "control",
-        "title": "Control Menu",
-        "width": 600,
+        "title": "Control Panel",
+        "width": 400,
         "height": 500,
         "visible": false,
         "shadow": false,

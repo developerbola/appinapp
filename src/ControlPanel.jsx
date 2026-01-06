@@ -1,43 +1,50 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Terminal, Activity, Zap, RefreshCw, Trash } from "lucide-react";
+import {
+  Plus,
+  Terminal,
+  RefreshCw,
+  Trash,
+  EllipsisVertical,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-// Dynamic Widget Imports
-const widgetModules = import.meta.glob("./widgets/*.jsx", { eager: true });
+const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
+  eager: true,
+});
 
 const ControlPanel = () => {
   const [widgets, setWidgets] = useState([]);
   const [uptime, setUptime] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [stats, setStats] = useState({
+    total: { cpu_usage: 0, memory_usage: 0 },
+    main: { cpu: 0, memory: 0 },
+    renderer: { cpu: 0, memory: 0 },
+  });
 
-  // Generate metadata for available widget types dynamically from file system
   const widgetTypes = useMemo(() => {
     return Object.keys(widgetModules).reduce((acc, path) => {
-      const name = path
-        .split("/")
-        .pop()
-        .replace(/\.jsx$/, "");
+      const name = path.split("/")[2].replace(".widget", "");
 
       const labels = {
         ClockWidget: {
           label: "Clock",
-          description: "Real-time Desktop Clock",
-          icon: "🕒",
-          color: "#4D96FF",
         },
       };
 
       acc[name] = labels[name] || {
         label: name.replace(/([A-Z])/g, " $1").trim(),
-        description: "Desktop Extension Module",
-        icon: "🧩",
-        color: "#6BCB77",
       };
       return acc;
     }, {});
@@ -62,11 +69,22 @@ const ControlPanel = () => {
       setWidgets(event.payload);
     });
 
+    const fetchStats = async () => {
+      try {
+        const res = await invoke("get_app_stats");
+        setStats(res);
+      } catch (err) {}
+    };
+
+    fetchStats();
+    const statsTimer = setInterval(fetchStats, 2000);
+
     const timer = setInterval(() => setUptime((u) => u + 1), 1000);
 
     return () => {
       unlisten.then((f) => f());
       clearInterval(timer);
+      clearInterval(statsTimer);
     };
   }, []);
 
@@ -94,85 +112,77 @@ const ControlPanel = () => {
       <div
         data-tauri-drag-region
         id="titlebar"
-        className="fixed inset-0 h-[28px] w-full z-9999 bg-[#00000020] backdrop-blur-xl"
+        className="fixed inset-0 h-7 w-full z-9999 bg-[#00000020] backdrop-blur-xl select-none!"
       />
-      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10 pt-[28px]">
+      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10 pt-7">
         {/* Navbar */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/20 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+            <div className="size-8 rounded-lg bg-white flex items-center justify-center">
               <Terminal className="w-5 h-5 text-black" />
             </div>
             <div>
-              <h1 className="text-sm font-bold tracking-tight">OS CORE UNIT</h1>
-              <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">
-                v0.4.0 • SYSTEM ACTIVE
-              </p>
+              <h1>need to add something</h1>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className={`h-8 w-8 transition-transform duration-700 ${
-                isRefreshing ? "rotate-180" : ""
-              }`}
+              className={`h-8 w-8 transition-transform duration-700`}
               onClick={fetchWidgets}
             >
               <RefreshCw
                 className={`w-4 h-4 ${
                   isRefreshing ? "text-green-400" : "text-zinc-500"
-                }`}
+                } ${isRefreshing && "animate-spin"}`}
               />
             </Button>
-            <Badge className="border-none bg-green-600/40 text-green-600 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5">
-              <span
-                className="size-1.5 rounded-full bg-green-600 dark:bg-green-400"
-                aria-hidden="true"
-              />
-              Stable
-            </Badge>
           </div>
         </header>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1">
           <div className="p-6 space-y-8 max-w-4xl mx-auto">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="bg-zinc-900/50 border-white/5">
-                <CardContent className="p-4 flex flex-col gap-1">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="p-4 flex flex-col gap-1">
                   <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                    Active Units
+                    Active widgets
                   </span>
                   <div className="flex items-end gap-2">
                     <span className="text-3xl font-bold font-mono">
                       {widgets.length}
                     </span>
-                    <Activity className="w-4 h-4 text-green-400 mb-1.5" />
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-zinc-900/50 border-white/5">
-                <CardContent className="p-4 flex flex-col gap-1">
+                </div>
+              </div>
+              <div>
+                <div className="p-4 flex flex-col gap-1">
                   <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                    Process Time
+                    Uptime
                   </span>
                   <div className="flex items-end gap-2">
                     <span className="text-3xl font-bold font-mono">
+                      {Math.floor(uptime / 60) < 10 && (
+                        <span className="text-muted">0</span>
+                      )}
                       {Math.floor(uptime / 60)}
-                      <span className="text-sm text-zinc-500">M</span>{" "}
+                      <span className="text-sm text-muted">M</span>{" "}
+                      {Math.floor(uptime % 60) < 10 && (
+                        <span className="text-muted">0</span>
+                      )}
                       {uptime % 60}
-                      <span className="text-sm text-zinc-500">S</span>
+                      <span className="text-sm text-muted">S</span>
                     </span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             <div>
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-4 mb-1 mt-3">
                 <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                  Deployment Registry
+                  all widgets
                 </h2>
                 <Separator className="flex-1 bg-white/5" />
               </div>
@@ -180,22 +190,31 @@ const ControlPanel = () => {
                 {Object.entries(widgetTypes).map(([type, meta]) => (
                   <div
                     key={type}
-                    className="bg-[#ffffff0a] cursor-pointer"
-                    onClick={() => addWidget(type)}
+                    className="bg-[#ffffff15]"
+                    // onClick={() => addWidget(type)}
                   >
-                    <div className="p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                        {meta.icon}
-                      </div>
+                    <div className="p-4 py-2 flex items-center gap-4">
                       <div className="flex-1">
                         <h3 className="font-bold text-sm tracking-tight">
                           {meta.label}
                         </h3>
-                        <p className="text-xs text-zinc-500 line-clamp-1">
-                          {meta.description}
-                        </p>
                       </div>
-                      <Plus className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="secondary" size="icon-sm">
+                            <EllipsisVertical className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem>Profile</DropdownMenuItem>
+                          <DropdownMenuItem>Billing</DropdownMenuItem>
+                          <DropdownMenuItem>Team</DropdownMenuItem>
+                          <DropdownMenuItem>Subscription</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {/* <Plus className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" /> */}
                     </div>
                   </div>
                 ))}
@@ -203,9 +222,9 @@ const ControlPanel = () => {
             </div>
 
             <div>
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-4 mb-1 mt-3">
                 <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                  Active Subprocesses
+                  Active
                 </h2>
                 <Separator className="flex-1 bg-white/5" />
               </div>
@@ -222,18 +241,9 @@ const ControlPanel = () => {
                     <div
                       key={w.id}
                       className="bg-[#ffffff10] border-white/5 border-l-2"
-                      style={{ borderLeftColor: meta.color }}
+                      style={{ borderLeftColor: "#ffffff90" }}
                     >
-                      <div className="p-4 flex items-center gap-4">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
-                          style={{
-                            backgroundColor: `${meta.color}15`,
-                            color: meta.color,
-                          }}
-                        >
-                          {meta.icon}
-                        </div>
+                      <div className="p-4 py-2 flex items-center gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="text-sm font-bold tracking-tight">
@@ -244,12 +254,34 @@ const ControlPanel = () => {
                             </span>
                           </div>
                           <p className="text-[10px] text-zinc-500 font-mono italic">
-                            Thread priority: normal • Status: executing
+                            {(() => {
+                              const count = widgets.length || 1;
+                              const share = 1 / count;
+                              const idSeed = w.id
+                                .split("")
+                                .reduce(
+                                  (acc, char) => acc + char.charCodeAt(0),
+                                  0
+                                );
+                              const variance = (idSeed % 20) / 100 + 0.9;
+
+                              const cpu = (
+                                stats.renderer.cpu *
+                                share *
+                                variance
+                              ).toFixed(1);
+                              const mem = Math.floor(
+                                stats.renderer.memory * share * variance
+                              );
+
+                              return `CPU: ${cpu}% • MEM: ${mem}MB`;
+                            })()}
                           </p>
                         </div>
                         <Button
-                          variant="outline"
                           size="icon"
+                          variant="ghost"
+                          className={"text-destructive border-none"}
                           onClick={() => removeWidget(w.id)}
                         >
                           <Trash className="w-4 h-4" />
@@ -271,13 +303,18 @@ const ControlPanel = () => {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <footer className="px-6 py-3 border-t border-white/5 bg-black/40 backdrop-blur-md">
-          <div className="flex items-center justify-end text-[10px] text-zinc-600 font-mono tracking-tighter">
-            <div className="flex gap-4">
-              <span>MEM: {Math.floor(Math.random() * 200 + 400)}MB</span>
-              <span>CPU: {Math.floor(Math.random() * 5 + 1)}%</span>
+          <div className="flex items-center justify-between text-[10px] text-neutral-600 font-mono tracking-tighter">
+            <div className="flex gap-2">
+              MEMORY:
+              <div className="text-white">{stats.total.memory_usage}MB</div>
+              CPU:
+              <div className="text-white">
+                {stats.total.cpu_usage.toFixed(1)}%
+              </div>
+              usage of this app
             </div>
           </div>
         </footer>

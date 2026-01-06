@@ -1,17 +1,8 @@
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
 use tauri::{Manager, Emitter};
-use core_graphics::event::CGEvent;
-use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
+use sysinfo::{System};
 
-#[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
-struct WidgetRect {
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
-}
+
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 struct WidgetConfig {
@@ -21,10 +12,8 @@ struct WidgetConfig {
 }
 
 struct AppState {
-    rects: Arc<Mutex<Vec<WidgetRect>>>,
-    #[allow(dead_code)]
-    ignoring: Arc<Mutex<bool>>, 
     widgets: Arc<Mutex<Vec<WidgetConfig>>>,
+    sys: Arc<Mutex<System>>,
 }
 
 #[tauri::command]
@@ -39,9 +28,20 @@ fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: Stri
     let id =  uuid::Uuid::new_v4().to_string();
     widgets.push(WidgetConfig {
         id: id.clone(),
-        w_type,
+        w_type: w_type.clone(),
     });
-    // Emit event to update frontend
+    
+    // Spawn a new window for the widget
+    let label = format!("widget-{}", id);
+    let _ = tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App("index.html".into()))
+        .title(format!("Widget: {}", w_type))
+        .transparent(true)
+        .decorations(false)
+        .always_on_bottom(true)
+        .inner_size(400.0, 400.0) // Default size, might be adjusted by content
+        .shadow(false)
+        .build();
+
     println!("Backend: Emitting widgets-update with {} widgets", widgets.len());
     let _ = app.emit("widgets-update", widgets.clone());
 }
@@ -51,14 +51,56 @@ fn remove_widget(app: tauri::AppHandle, state: tauri::State<AppState>, id: Strin
     println!("Backend: remove_widget called with id: {}", id);
     let mut widgets = state.widgets.lock().unwrap();
     widgets.retain(|w| w.id != id);
+    
+    // Close the corresponding window
+    if let Some(w) = app.get_webview_window(&format!("widget-{}", id)) {
+        let _ = w.close();
+    }
+
     let _ = app.emit("widgets-update", widgets.clone());
 }
 
+// Removed update_widget_rects as we're now using separate windows per widget
+
 #[tauri::command]
-fn update_widget_rects(app_state: tauri::State<AppState>, rects: Vec<WidgetRect>) {
-    // Update the shared state with new rects
-    let mut state_rects = app_state.rects.lock().unwrap();
-    *state_rects = rects;
+fn get_app_stats(state: tauri::State<AppState>) -> serde_json::Value {
+    let mut sys = state.sys.lock().unwrap();
+    sys.refresh_all();
+    
+    let mut main_cpu = 0.0;
+    let mut main_mem = 0;
+    let mut render_cpu = 0.0;
+    let mut render_mem = 0;
+
+    if let Ok(pid) = sysinfo::get_current_pid() {
+        if let Some(process) = sys.process(pid) {
+            main_cpu = process.cpu_usage();
+            main_mem = process.memory();
+        }
+
+        // Include child processes (renderers)
+        for (_, process) in sys.processes() {
+            if process.parent() == Some(pid) {
+                render_cpu += process.cpu_usage();
+                render_mem += process.memory();
+            }
+        }
+    }
+
+    serde_json::json!({
+        "main": {
+            "cpu": main_cpu,
+            "memory": main_mem / 1024 / 1024
+        },
+        "renderer": {
+            "cpu": render_cpu,
+            "memory": render_mem / 1024 / 1024
+        },
+        "total": {
+            "cpu_usage": main_cpu + render_cpu,
+            "memory_usage": (main_mem + render_mem) / 1024 / 1024
+        }
+    })
 }
 
 #[tauri::command]
@@ -66,36 +108,46 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+async fn execute_command(command: String) -> Result<String, String> {
+    use std::process::Command;
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd").args(["/C", &command]).output()
+    } else {
+        Command::new("sh").args(["-c", &command]).output()
+    };
+
+    match output {
+        Ok(o) => {
+            if o.status.success() {
+                Ok(String::from_utf8_lossy(&o.stdout).to_string())
+            } else {
+                Err(String::from_utf8_lossy(&o.stderr).to_string())
+            }
+        },
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let rects = Arc::new(Mutex::new(Vec::new()));
-    let ignoring = Arc::new(Mutex::new(false)); // Default to NOT ignoring (interactive initially)
-
-    let rects_clone = rects.clone();
-    let ignoring_clone = ignoring.clone();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState { 
-            rects: rects,
-            ignoring: ignoring,
-            widgets: Arc::new(Mutex::new(vec![
-                // Default widgets
-                WidgetConfig { id: "default-clock".into(), w_type: "ClockWidget".into() },
-            ])),
+            widgets: Arc::new(Mutex::new(vec![])),
+            sys: Arc::new(Mutex::new(System::new_all())),
         })
-        .invoke_handler(tauri::generate_handler![greet, update_widget_rects, get_widgets, add_widget, remove_widget])
+        .invoke_handler(tauri::generate_handler![greet, get_widgets, add_widget, remove_widget, get_app_stats, execute_command])
         .setup(move |app| {
-            let window = app.get_webview_window("main").unwrap();
-            
             // Set Activation Policy to Accessory (hides dock icon)
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             // System Tray Setup
             let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).unwrap();
-            let show_i = tauri::menu::MenuItem::with_id(app, "show_control", "Control Menu", true, None::<&str>).unwrap();
-            let menu = tauri::menu::Menu::with_items(app, &[&show_i, &quit_i]).unwrap();
+            let show_i = tauri::menu::MenuItem::with_id(app, "show_control", "Control Panel", true, None::<&str>).unwrap();
+            let debug_i = tauri::menu::MenuItem::with_id(app, "show_debug", "Show debug consoles", true, None::<&str>).unwrap();
+            let menu = tauri::menu::Menu::with_items(app, &[&show_i, &debug_i, &quit_i]).unwrap();
 
             
             let icon_img = image::load_from_memory(include_bytes!("../icons/tray.png"))
@@ -117,17 +169,24 @@ pub fn run() {
                                  let _ = w.set_focus();
                              }
                         }
+                        "show_debug" => {
+                            // Open devtools for all widget windows
+                            for (_, window) in app.webview_windows() {
+                                window.open_devtools();
+                            }
+                        }
                         _ => {}
                     }
                 })
                 .build(app);
 
-            // Setup for Main Window
-            #[cfg(desktop)]
-            let _ = window.set_always_on_bottom(true);
-            let _ = window.maximize();
-            let _ = window.set_ignore_cursor_events(true);
-            *ignoring_clone.lock().unwrap() = true;
+            // Hide or handle main window
+            if let Some(main) = app.get_webview_window("main") {
+                let _ = main.hide();
+            }
+
+            // Spawn initial widget
+            add_widget(app.handle().clone(), app.state::<AppState>(), "ClockWidget".into());
 
             // Setup for Control Window if it exists
             if let Some(control_window) = app.get_webview_window("control") {
@@ -143,60 +202,6 @@ pub fn run() {
                     }
                 });
             }
-
-            let app_handle = app.handle().clone();
-            
-            thread::spawn(move || {
-                loop {
-                    // Get Global Mouse Position
-                    // core-graphics approach
-                    // HIDSystemState source gives us an event reflecting current state
-                    if let Ok(source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
-                        if let Ok(event) = CGEvent::new(source) {
-                             let point = event.location();
-                             // Convert point if needed? CGEvent location is usually in screen coordinates.
-                         // Standard macOS screen coords: (0,0) is top-left of main screen usually.
-                         
-                         let rects = rects_clone.lock().unwrap();
-                         let mut is_over_widget = false;
-                         
-                         for r in rects.iter() {
-                             // Simple AABB check
-                             // Note: App window might be different size than screen if not maximized correctly
-                             // But we maximized it.
-                             if point.x >= r.x && point.x <= (r.x + r.width) &&
-                                point.y >= r.y && point.y <= (r.y + r.height) {
-                                 is_over_widget = true;
-                                 break;
-                             }
-                         }
-                         
-                         let mut currently_ignoring = ignoring_clone.lock().unwrap();
-                         
-                         // Logic:
-                         // If over widget -> We want interaction -> ignore = false
-                         // If NOT over widget -> We want pass-through -> ignore = true
-                         
-                         let should_ignore = !is_over_widget;
-                         
-                         if *currently_ignoring != should_ignore {
-                             // State change!
-                             let w = app_handle.get_webview_window("main");
-                             if let Some(win) = w {
-                                 let _ = win.set_ignore_cursor_events(should_ignore);
-                                 *currently_ignoring = should_ignore;
-                                 
-                                 // Optional: Debug logging
-                                 // println!("State change: ignoring={}", should_ignore);
-                             }
-                         }
-                    } // End event
-                    } // End source
-                    
-                    // Poll rate: 50ms = 20fps check. Good enough for UI.
-                    thread::sleep(Duration::from_millis(50));
-                }
-            });
 
             Ok(())
         })
