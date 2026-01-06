@@ -89,7 +89,17 @@ const ControlPanel = () => {
   const addWidget = async (type) => {
     console.log("ControlPanel: Requesting to add widget of type:", type);
     try {
-      await invoke("add_widget", { wType: type });
+      // Find the module for this type to check for isBackground export
+      const modulePath = Object.keys(widgetModules).find((path) =>
+        path.includes(`${type}.widget/index.jsx`)
+      );
+      const module = modulePath ? widgetModules[modulePath] : null;
+      const isBackground = module?.isBackground;
+
+      await invoke("add_widget", {
+        wType: type,
+        isBackground: isBackground,
+      });
       await fetchWidgets();
     } catch (err) {
       console.error("Failed to add widget:", err);

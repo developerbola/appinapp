@@ -53,7 +53,8 @@ const ClockWidget = () => {
   );
 };
 
-export const windowTop = 10000;
-export const windowLeft = 10000;
+export const windowTop = 100;
+export const windowLeft = 100;
+export const isBackground = true;
 
 export default ClockWidget;

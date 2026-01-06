@@ -116,7 +116,8 @@ const Todo = () => {
   );
 };
 
-export const windowTop = 30;
-export const windowLeft = 0;
+export const windowTop = 100;
+export const windowLeft = 500;
+export const isBackground = false;
 
 export default Todo;

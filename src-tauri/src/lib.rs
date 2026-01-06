@@ -22,27 +22,74 @@ fn get_widgets(state: tauri::State<AppState>) -> Vec<WidgetConfig> {
 }
 
 #[tauri::command]
-fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: String) {
-    println!("Backend: add_widget called with type: {}", w_type);
+fn add_widget(app: tauri::AppHandle, state: tauri::State<AppState>, w_type: String, is_background: Option<bool>) {
+    println!("Backend: add_widget called with type: {}, is_background: {:?}", w_type, is_background);
     let mut widgets = state.widgets.lock().unwrap();
     let id =  uuid::Uuid::new_v4().to_string();
+    let is_bg = is_background.unwrap_or(true);
+    
     widgets.push(WidgetConfig {
         id: id.clone(),
         w_type: w_type.clone(),
-        is_background: false,
+        is_background: is_bg,
     });
     
     // Spawn a new window for the widget
     let label = format!("widget-{}", id);
-    let _ = tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App("index.html".into()))
+    let window = tauri::WebviewWindowBuilder::new(&app, label.clone(), tauri::WebviewUrl::App("index.html".into()))
         .title(format!("Widget: {}", w_type))
         .transparent(true)
         .decorations(false)
         .resizable(false)
-        .always_on_bottom(true)
         .shadow(false)
         .visible_on_all_workspaces(true)
-        .build();
+        .maximized(true)
+        .build()
+        .unwrap();
+
+    // Apply background settings immediately
+    #[cfg(not(target_os = "macos"))]
+    let _ = window.set_ignore_cursor_events(is_bg);
+    
+    #[cfg(target_os = "macos")]
+    {
+        use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+        use cocoa::base::id as cocoa_id;
+        
+        extern "C" {
+            pub fn CGWindowLevelForKey(key: i32) -> i32;
+        }
+
+        if let Ok(ns_window) = window.ns_window() {
+            let ns_window = ns_window as cocoa_id;
+            unsafe {
+                if is_bg {
+                    // kCGDesktopWindowLevelKey is 2
+                    let level = CGWindowLevelForKey(2);
+                    ns_window.setLevel_(level as i64);
+                    ns_window.setIgnoresMouseEvents_(if is_bg { cocoa::base::YES } else { cocoa::base::NO });
+                    ns_window.setCollectionBehavior_(
+                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
+                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary |
+                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle
+                    );
+                } else {
+                    // kCGFloatingWindowLevelKey is 3
+                    let level = CGWindowLevelForKey(3);
+                    ns_window.setLevel_(level as i64); 
+                    ns_window.setIgnoresMouseEvents_(cocoa::base::NO);
+                    ns_window.setCollectionBehavior_(
+                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorDefault
+                    );
+                }
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window.set_always_on_bottom(is_bg);
+    }
 
     println!("Backend: Emitting widgets-update with {} widgets", widgets.len());
     let _ = app.emit("widgets-update", widgets.clone());
@@ -55,6 +102,7 @@ fn set_widget_background(app: tauri::AppHandle, state: tauri::State<AppState>, i
         w.is_background = background;
         
         if let Some(window) = app.get_webview_window(&format!("widget-{}", id)) {
+            #[cfg(not(target_os = "macos"))]
             let _ = window.set_ignore_cursor_events(background);
             
             #[cfg(target_os = "macos")]
@@ -72,6 +120,7 @@ fn set_widget_background(app: tauri::AppHandle, state: tauri::State<AppState>, i
                         // kCGDesktopWindowLevelKey is 2
                         let level = CGWindowLevelForKey(2);
                         ns_window.setLevel_(level as i64);
+                        ns_window.setIgnoresMouseEvents_(if background { cocoa::base::YES } else { cocoa::base::NO });
                         ns_window.setCollectionBehavior_(
                             NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
                             NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary |
@@ -81,6 +130,7 @@ fn set_widget_background(app: tauri::AppHandle, state: tauri::State<AppState>, i
                         // kCGFloatingWindowLevelKey is 3
                         let level = CGWindowLevelForKey(3);
                         ns_window.setLevel_(level as i64); 
+                        ns_window.setIgnoresMouseEvents_(cocoa::base::NO);
                         ns_window.setCollectionBehavior_(
                             NSWindowCollectionBehavior::NSWindowCollectionBehaviorDefault
                         );
@@ -233,7 +283,7 @@ pub fn run() {
             }
 
             // Spawn initial widget
-            add_widget(app.handle().clone(), app.state::<AppState>(), "ClockWidget".into());
+            add_widget(app.handle().clone(), app.state::<AppState>(), "ClockWidget".into(), None);
 
             // Setup for Control Window if it exists
             if let Some(control_window) = app.get_webview_window("control") {

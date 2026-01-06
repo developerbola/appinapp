@@ -15,8 +15,6 @@ const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
 });
 
-const ALL_WIDGETS = {}; // Placeholder if needed, but we'll remove usage below
-
 class ErrorBoundary extends ReactComponent {
   constructor(props) {
     super(props);
@@ -76,36 +74,16 @@ const WidgetHandler = ({ widgetInfo, module }) => {
     }
   }, []);
 
+  // Position is now handled by CSS, no need to move the window
+  // Window is maximized by default from the backend
   useEffect(() => {
-    const currentWindow = getCurrentWindow();
-
-    // Set initial position if provided by widget
-    // We check for number type specifically to allow 0
-    if (typeof windowTop === "number" && typeof windowLeft === "number") {
-      import("@tauri-apps/api/dpi").then(({ LogicalPosition }) => {
-        currentWindow.setPosition(new LogicalPosition(windowLeft, windowTop));
-      });
-    }
-
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(async (entries) => {
-      for (let entry of entries) {
-        const { inlineSize, blockSize } = entry.borderBoxSize[0] || {
-          inlineSize: entry.contentRect.width,
-          blockSize: entry.contentRect.height,
-        };
-
-        if (inlineSize > 0 && blockSize > 0) {
-          const { LogicalSize } = await import("@tauri-apps/api/dpi");
-          await currentWindow.setSize(new LogicalSize(inlineSize, blockSize));
-        }
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+    // No-op for window movements
   }, [windowTop, windowLeft]);
+
+  // We no longer resize the window to fit the widget; the window is full screen.
+  useEffect(() => {
+    // No-op for window resizing
+  }, []);
 
   useEffect(() => {
     if (!command) return;
@@ -143,7 +121,15 @@ const WidgetHandler = ({ widgetInfo, module }) => {
   return (
     <ErrorBoundary name={widgetInfo.w_type}>
       {module.className && <style>{`${module.className}`}</style>}
-      <div ref={containerRef} style={{ display: "inline-block" }}>
+      <div
+        ref={containerRef}
+        style={{
+          position: "absolute",
+          top: windowTop ?? 0,
+          left: windowLeft ?? 0,
+          display: "inline-block",
+        }}
+      >
         <Component output={output} error={error} run={run} />
       </div>
     </ErrorBoundary>
@@ -162,7 +148,7 @@ function App() {
       acc[name] = widgetModules[path];
       return acc;
     }, {});
-  }, []);
+  }, [widgetModules]);
 
   useEffect(() => {
     const currentWindow = getCurrentWindow();
@@ -194,7 +180,7 @@ function App() {
     const module = widgetsData[widget.w_type];
 
     return (
-      <div className="overflow-hidden bg-transparent pointer-events-none">
+      <div className="w-screen h-screen overflow-hidden bg-transparent pointer-events-none relative">
         <WidgetHandler widgetInfo={widget} module={module} />
       </div>
     );
