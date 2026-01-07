@@ -134,22 +134,20 @@ const ControlPanel = () => {
         id="titlebar"
         className="fixed inset-0 h-7 w-full z-9999 bg-[#00000020] backdrop-blur-xl select-none!"
       />
-      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10 pt-7">
-        {/* Navbar */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/20 backdrop-blur-md">
+      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10 pt-7 hide-scrollbar">
+        <header className="flex items-center justify-between px-6 py-3 border-b border-[#ffffff12] bg-black/20 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="size-8 rounded-lg bg-white flex items-center justify-center">
-              <Terminal className="w-5 h-5 text-black" />
-            </div>
-            <div>
-              <h1>need to add something</h1>
-            </div>
+            <h1 className="text-xl">Control</h1>
           </div>
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
               size="icon"
-              className={`h-8 w-8 transition-transform duration-700`}
+              className={`h-8 w-8 ${
+                isRefreshing
+                  ? "bg-[#00c95030] border-[#00c95060] text-green-400"
+                  : "text-zinc-500"
+              }`}
               onClick={fetchWidgets}
             >
               <RefreshCw
@@ -161,8 +159,8 @@ const ControlPanel = () => {
           </div>
         </header>
 
-        <div className="flex-1">
-          <div className="p-6 space-y-8 max-w-4xl mx-auto">
+        <div>
+          <div className="p-6 pt-1 space-y-8 max-w-4xl mx-auto">
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <div className="p-4 flex flex-col gap-1">
@@ -361,7 +359,7 @@ const ControlPanel = () => {
           </div>
         </div>
 
-        <footer className="px-6 py-3 border-t border-white/5 bg-black/40 backdrop-blur-md">
+        <footer className="px-6 py-3 border-t border-[#ffffff10] bg-black/40 backdrop-blur-md">
           <div className="flex items-center justify-between text-[10px] text-neutral-600 font-mono tracking-tighter">
             <div className="flex gap-2">
               MEMORY:

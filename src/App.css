@@ -92,3 +92,14 @@ body {
 .menuItem:hover {
   background: #ffffff15;
 }
+
+/* Global CSS */
+.hide-scrollbar {
+  overflow: auto; /* still scrollable */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
