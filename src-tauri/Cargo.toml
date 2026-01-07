@@ -28,5 +28,6 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 sysinfo = "0.33.1"
 objc = "0.2.7"
 cocoa = "0.26.1"
+tauri-plugin-dialog = "2"
 
 

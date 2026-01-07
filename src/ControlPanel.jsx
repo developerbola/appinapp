@@ -11,6 +11,7 @@ import {
   Monitor,
   CirclePlus,
   CircleMinus,
+  Settings,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -18,6 +19,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "./components/ui/input";
+import FolderSelect from "./components/FolderSelect";
+import { Checkbox } from "./components/ui/checkbox";
+import { Label } from "./components/ui/label";
 
 const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
@@ -32,6 +37,7 @@ const ControlPanel = () => {
     main: { cpu: 0, memory: 0 },
     renderer: { cpu: 0, memory: 0 },
   });
+  const [isSettings, setIsSettings] = useState(false);
 
   const widgetTypes = useMemo(() => {
     return Object.keys(widgetModules).reduce((acc, path) => {
@@ -139,11 +145,19 @@ const ControlPanel = () => {
           <div className="flex items-center gap-3">
             <h1 className="text-xl">Control</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={"outline"}
+              size="icon"
+              className={`size-8 duration-50 ${isSettings && "bg-border"}`}
+              onClick={() => setIsSettings(!isSettings)}
+            >
+              <Settings className={"size-4 opacity-70"} />
+            </Button>
             <Button
               variant="outline"
               size="icon"
-              className={`h-8 w-8 ${
+              className={`size-8 ${
                 isRefreshing
                   ? "bg-[#00c95030] border-[#00c95060] text-green-400"
                   : "text-zinc-500"
@@ -151,227 +165,246 @@ const ControlPanel = () => {
               onClick={fetchWidgets}
             >
               <RefreshCw
-                className={`w-4 h-4 ${
-                  isRefreshing ? "text-green-400" : "text-zinc-500"
+                className={`size-4 ${
+                  isRefreshing ? "text-green-400" : "text-zinc-400"
                 } ${isRefreshing && "animate-spin"}`}
               />
             </Button>
           </div>
         </header>
 
-        <div>
-          <div className="p-6 pt-1 space-y-8 max-w-4xl mx-auto">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <div className="p-4 flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                    Active widgets
-                  </span>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold font-mono">
-                      {widgets.length}
-                    </span>
-                  </div>
-                </div>
+        {isSettings ? (
+          <div>
+            <div className="p-6 pt-4 flex flex-col gap-2 max-w-4xl mx-auto">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={"launch"}
+                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
+                />
+                <Label htmlFor="launch">Launch when login</Label>
               </div>
               <div>
-                <div className="p-4 flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                    Uptime
-                  </span>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold font-mono">
-                      {Math.floor(uptime / 60) < 10 && (
-                        <span className="text-muted">0</span>
-                      )}
-                      {Math.floor(uptime / 60)}
-                      <span className="text-sm text-muted">M</span>{" "}
-                      {Math.floor(uptime % 60) < 10 && (
-                        <span className="text-muted">0</span>
-                      )}
-                      {uptime % 60}
-                      <span className="text-sm text-muted">S</span>
-                    </span>
-                  </div>
-                </div>
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                  Widgets folder
+                </span>
+                <FolderSelect />
               </div>
             </div>
-
-            <div>
-              <div className="flex items-center gap-4 mb-1 mt-3">
-                <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                  all widgets
-                </h2>
-                <Separator className="flex-1 bg-white/5" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                {Object.entries(widgetTypes).map(([type, meta]) => (
-                  <div
-                    key={type}
-                    className="bg-[#ffffff10] border border-[#ffffff05] border-l-2 border-l-[#ffffff40]"
-                  >
-                    <div className="pl-4 pr-2 py-1 flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-sm tracking-tight">
-                          {meta.label}
-                        </h3>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className={"opacity-60"}
-                          >
-                            <EllipsisVertical className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {[
-                            {
-                              label: "Add",
-                              icon: <CirclePlus className="w-4 h-4" />,
-                              onClick: () => addWidget(type),
-                            },
-                            {
-                              label: "Delete",
-                              icon: <Trash className="w-4 h-4" />,
-                              onClick: () => removeWidget(type),
-                              danger: true,
-                            },
-                          ].map((item) => (
-                            <DropdownMenuItem
-                              key={item.label}
-                              onClick={item.onClick}
-                              className="flex items-center justify-between gap-3 menuItem"
-                            >
-                              <span>{item.label}</span>
-                              {item.icon}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+          </div>
+        ) : (
+          <div>
+            <div className="p-6 pt-1 space-y-8 max-w-4xl mx-auto">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="p-4 flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                      Active widgets
+                    </span>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold font-mono">
+                        {widgets.length}
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
+                <div>
+                  <div className="p-4 flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                      Uptime
+                    </span>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-bold font-mono">
+                        {Math.floor(uptime / 60) < 10 && (
+                          <span className="text-muted">0</span>
+                        )}
+                        {Math.floor(uptime / 60)}
+                        <span className="text-sm text-muted">M</span>{" "}
+                        {Math.floor(uptime % 60) < 10 && (
+                          <span className="text-muted">0</span>
+                        )}
+                        {uptime % 60}
+                        <span className="text-sm text-muted">S</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="flex items-center gap-4 mb-1 mt-3">
-                <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                  Active
-                </h2>
-                <Separator className="flex-1 bg-white/5" />
-              </div>
-              <div className="flex flex-col gap-1">
-                {widgets.map((w) => {
-                  const meta = widgetTypes[w.w_type] || {
-                    label: "Unknown",
-                  };
-
-                  return (
+              <div>
+                <div className="flex items-center gap-4 mb-1 mt-3">
+                  <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    all widgets
+                  </h2>
+                  <Separator className="flex-1 bg-white/5" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  {Object.entries(widgetTypes).map(([type, meta]) => (
                     <div
-                      key={w.id}
-                      className="bg-[#ffffff10] border-l-2"
-                      style={{ borderLeftColor: "#ffffff90" }}
+                      key={type}
+                      className="bg-[#ffffff10] border border-[#ffffff05] border-l-2 border-l-[#ffffff40]"
                     >
-                      <div className="p-4 py-2 flex items-center gap-4">
+                      <div className="pl-4 pr-2 py-1 flex items-center justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold tracking-tight">
-                              {meta.label}
-                            </h4>
-                            <span className="text-[9px] font-mono text-zinc-600 px-1.5 py-0.5 bg-black/50 rounded uppercase">
-                              PID: {w.id.substring(0, 8)}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-zinc-500 font-mono italic">
-                            {(() => {
-                              const count = widgets.length || 1;
-                              const share = 1 / count;
-                              const idSeed = w.id
-                                .split("")
-                                .reduce(
-                                  (acc, char) => acc + char.charCodeAt(0),
-                                  0
-                                );
-                              const variance = (idSeed % 20) / 100 + 0.9;
-
-                              const cpu = (
-                                stats.renderer.cpu *
-                                share *
-                                variance
-                              ).toFixed(1);
-                              const mem = Math.floor(
-                                stats.renderer.memory * share * variance
-                              );
-
-                              return `CPU: ${cpu}% • MEM: ${mem}MB`;
-                            })()}
-                          </p>
+                          <h3 className="font-bold text-sm tracking-tight">
+                            {meta.label}
+                          </h3>
                         </div>
-                        <div className="flex">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className={`${
-                              w.is_background
-                                ? "text-blue-400 bg-blue-400/10"
-                                : "text-zinc-500"
-                            } border-none`}
-                            onClick={() =>
-                              toggleWidgetBackground(w.id, w.is_background)
-                            }
-                            title={
-                              w.is_background
-                                ? "Move to Foreground"
-                                : "Send to Background"
-                            }
-                          >
-                            <Monitor className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className={"text-destructive border-none"}
-                            onClick={() => removeWidget(w.id)}
-                          >
-                            <CircleMinus className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className={"opacity-60"}
+                            >
+                              <EllipsisVertical className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {[
+                              {
+                                label: "Add",
+                                icon: <CirclePlus className="w-4 h-4" />,
+                                onClick: () => addWidget(type),
+                              },
+                              {
+                                label: "Delete",
+                                icon: <Trash className="w-4 h-4" />,
+                                onClick: () => removeWidget(type),
+                                danger: true,
+                              },
+                            ].map((item) => (
+                              <DropdownMenuItem
+                                key={item.label}
+                                onClick={item.onClick}
+                                className="flex items-center justify-between gap-3 menuItem"
+                              >
+                                <span>{item.label}</span>
+                                {item.icon}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                  );
-                })}
-                {widgets.length === 0 && (
-                  <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/1">
-                    <p className="text-xs text-zinc-600 font-medium">
-                      NO ACTIVE PROCESSES
-                    </p>
-                    <p className="text-[12px] text-zinc-700 mt-1 tracking-tighter">
-                      Add widgets to begin
-                    </p>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <footer className="px-6 py-3 border-t border-[#ffffff10] bg-black/40 backdrop-blur-md">
-          <div className="flex items-center justify-between text-[10px] text-neutral-600 font-mono tracking-tighter">
-            <div className="flex gap-2">
-              MEMORY:
-              <div className="text-white">{stats.total.memory_usage}MB</div>
-              CPU:
-              <div className="text-white">
-                {stats.total.cpu_usage.toFixed(1)}%
+              <div>
+                <div className="flex items-center gap-4 mb-1 mt-3">
+                  <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    Active
+                  </h2>
+                  <Separator className="flex-1 bg-white/5" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  {widgets.map((w) => {
+                    const meta = widgetTypes[w.w_type] || {
+                      label: "Unknown",
+                    };
+
+                    return (
+                      <div
+                        key={w.id}
+                        className="bg-[#ffffff10] border-l-2"
+                        style={{ borderLeftColor: "#ffffff90" }}
+                      >
+                        <div className="p-4 py-2 flex items-center gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold tracking-tight">
+                                {meta.label}
+                              </h4>
+                              <span className="text-[9px] font-mono text-zinc-600 px-1.5 py-0.5 bg-black/50 rounded uppercase">
+                                PID: {w.id.substring(0, 8)}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 font-mono italic">
+                              {(() => {
+                                const count = widgets.length || 1;
+                                const share = 1 / count;
+                                const idSeed = w.id
+                                  .split("")
+                                  .reduce(
+                                    (acc, char) => acc + char.charCodeAt(0),
+                                    0
+                                  );
+                                const variance = (idSeed % 20) / 100 + 0.9;
+
+                                const cpu = (
+                                  stats.renderer.cpu *
+                                  share *
+                                  variance
+                                ).toFixed(1);
+                                const mem = Math.floor(
+                                  stats.renderer.memory * share * variance
+                                );
+
+                                return `CPU: ${cpu}% • MEM: ${mem}MB`;
+                              })()}
+                            </p>
+                          </div>
+                          <div className="flex">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className={`${
+                                w.is_background
+                                  ? "text-blue-400 bg-blue-400/10"
+                                  : "text-zinc-500"
+                              } border-none`}
+                              onClick={() =>
+                                toggleWidgetBackground(w.id, w.is_background)
+                              }
+                              title={
+                                w.is_background
+                                  ? "Move to Foreground"
+                                  : "Send to Background"
+                              }
+                            >
+                              <Monitor className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className={"text-destructive border-none"}
+                              onClick={() => removeWidget(w.id)}
+                            >
+                              <CircleMinus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {widgets.length === 0 && (
+                    <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/1">
+                      <p className="text-xs text-zinc-600 font-medium">
+                        NO ACTIVE PROCESSES
+                      </p>
+                      <p className="text-[12px] text-zinc-700 mt-1 tracking-tighter">
+                        Add widgets to begin
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-              usage of this app
             </div>
+            <footer className="px-6 py-3 border-t border-[#ffffff10] bg-black/40 backdrop-blur-md">
+              <div className="flex items-center justify-between text-[10px] text-neutral-600 font-mono tracking-tighter">
+                <div className="flex gap-2">
+                  MEMORY:
+                  <div className="text-white">{stats.total.memory_usage}MB</div>
+                  CPU:
+                  <div className="text-white">
+                    {stats.total.cpu_usage.toFixed(1)}%
+                  </div>
+                  usage of this app
+                </div>
+              </div>
+            </footer>
           </div>
-        </footer>
+        )}
       </div>
     </>
   );

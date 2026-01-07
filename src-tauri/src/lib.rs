@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
-use tauri::{Manager, Emitter};
 use sysinfo::System;
+use tauri::{Emitter, Manager};
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 struct WidgetConfig {
@@ -41,7 +41,6 @@ fn add_widget(
     let win_height = height.unwrap_or(200.0);
     let win_x = x.unwrap_or(100.0);
     let win_y = y.unwrap_or(100.0);
-    
 
     let window = tauri::WebviewWindowBuilder::new(
         &app,
@@ -51,8 +50,8 @@ fn add_widget(
     .title(format!("Widget: {}", w_type))
     .transparent(true)
     .decorations(false)
-    .inner_size(win_width, win_height) 
-    .position(win_x, win_y)   
+    .inner_size(win_width, win_height)
+    .position(win_x, win_y)
     .resizable(false)
     .shadow(false)
     .visible_on_all_workspaces(true)
@@ -87,14 +86,9 @@ fn add_widget(
 }
 
 #[tauri::command]
-fn set_widget_background(
-    app: tauri::AppHandle,
-    state: tauri::State<AppState>,
-    id: String,
-) {
+fn set_widget_background(app: tauri::AppHandle, state: tauri::State<AppState>, id: String) {
     let mut widgets = state.widgets.lock().unwrap();
     if let Some(_w) = widgets.iter_mut().find(|w| w.id == id) {
-
         if let Some(window) = app.get_webview_window(&format!("widget-{}", id)) {
             #[cfg(target_os = "macos")]
             {
@@ -178,9 +172,7 @@ async fn execute_command(command: String) -> Result<String, String> {
     };
 
     match output {
-        Ok(o) if o.status.success() => {
-            Ok(String::from_utf8_lossy(&o.stdout).to_string())
-        }
+        Ok(o) if o.status.success() => Ok(String::from_utf8_lossy(&o.stdout).to_string()),
         Ok(o) => Err(String::from_utf8_lossy(&o.stderr).to_string()),
         Err(e) => Err(e.to_string()),
     }
@@ -189,6 +181,7 @@ async fn execute_command(command: String) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
             widgets: Arc::new(Mutex::new(vec![])),
@@ -206,8 +199,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            let quit_i =
-                tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = tauri::menu::MenuItem::with_id(
                 app,
                 "show_control",
@@ -223,15 +215,13 @@ pub fn run() {
                 None::<&str>,
             )?;
 
-            let menu =
-                tauri::menu::Menu::with_items(app, &[&show_i, &debug_i, &quit_i])?;
+            let menu = tauri::menu::Menu::with_items(app, &[&show_i, &debug_i, &quit_i])?;
 
             let icon_img = image::load_from_memory(include_bytes!("../icons/tray.png"))
                 .expect("failed to load tray icon")
                 .into_rgba8();
             let (w, h) = icon_img.dimensions();
-            let tray_icon =
-                tauri::image::Image::new_owned(icon_img.into_vec(), w, h);
+            let tray_icon = tauri::image::Image::new_owned(icon_img.into_vec(), w, h);
 
             tauri::tray::TrayIconBuilder::new()
                 .icon(tray_icon)
@@ -257,7 +247,6 @@ pub fn run() {
             if let Some(main) = app.get_webview_window("main") {
                 let _ = main.hide();
             }
-
 
             Ok(())
         })
