@@ -20,31 +20,20 @@ class ErrorBoundary extends ReactComponent {
     super(props);
     this.state = { hasError: false, error: null };
   }
+
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
-  componentDidCatch(error, errorInfo) {
-    console.error("Widget Crash:", error, errorInfo);
+
+  componentDidCatch(error, info) {
+    console.error("Widget crash:", error, info);
   }
+
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          className="widget"
-          style={{
-            background: "rgba(255,0,0,0.1)",
-            color: "red",
-            padding: "20px",
-            borderRadius: "10px",
-            border: "1px solid red",
-            fontSize: "12px",
-            maxWidth: "300px",
-          }}
-        >
-          <strong>Widget "{this.props.name}" Crashed</strong>
-          <pre style={{ whiteSpace: "pre-wrap", marginTop: "10px" }}>
-            {this.state.error?.message}
-          </pre>
+        <div className="relative" style={{ color: "red", padding: 12 }}>
+          Widget crashed: {this.state.error?.message}
         </div>
       );
     }
@@ -58,80 +47,68 @@ const WidgetHandler = ({ widgetInfo, module }) => {
   const Component = module.default;
   const command = module.command;
   const refreshFrequency = module.refreshFrequency;
-  const windowTop = module.windowTop;
-  const windowLeft = module.windowLeft;
+
+  const {
+    windowTop = 0,
+    windowLeft = 0,
+    windowWidth = 300,
+    windowHeight = 200,
+  } = module;
 
   const [output, setOutput] = useState("");
   const [error, setError] = useState(null);
-  const containerRef = React.useRef(null);
 
   const run = useCallback(async (cmd) => {
-    try {
-      return await invoke("execute_command", { command: cmd });
-    } catch (err) {
-      console.error("Widget run() error:", err);
-      throw err;
-    }
+    return invoke("execute_command", { command: cmd });
   }, []);
 
-  // Position is now handled by CSS, no need to move the window
-  // Window is maximized by default from the backend
   useEffect(() => {
-    // No-op for window movements
-  }, [windowTop, windowLeft]);
-
-  // We no longer resize the window to fit the widget; the window is full screen.
-  useEffect(() => {
-    // No-op for window resizing
-  }, []);
+    const positionWidget = async () => {
+      const win = getCurrentWindow();
+      const monitor = await currentMonitor();
+      if (monitor) {
+        const scaleFactor = monitor.scaleFactor;
+        const physicalSize = await convertLogicalToPhysical(
+          monitor.size,
+          scaleFactor
+        );
+        const adjustedY = physicalSize.height - windowHeight;
+        await win.setPosition({ x: 0, y: adjustedY, logical: false });
+        await win.setSize({
+          width: windowWidth,
+          height: windowHeight,
+          logical: false,
+        });
+      }
+    };
+    positionWidget();
+  }, [windowTop, windowLeft, windowWidth, windowHeight]);
 
   useEffect(() => {
     if (!command) return;
 
-    const runCommand = async () => {
+    const exec = async () => {
       try {
         const result = await invoke("execute_command", { command });
         setOutput(result);
         setError(null);
-      } catch (err) {
-        console.error("Widget Command Error:", err);
-        setError(err);
+      } catch (e) {
+        setError(e);
       }
     };
 
-    runCommand();
+    exec();
 
     if (refreshFrequency) {
-      const interval = setInterval(runCommand, refreshFrequency);
-      return () => clearInterval(interval);
+      const id = setInterval(exec, refreshFrequency);
+      return () => clearInterval(id);
     }
   }, [command, refreshFrequency]);
 
-  if (!Component) {
-    return (
-      <div
-        className="widget"
-        style={{ color: "red", background: "black", padding: "10px" }}
-      >
-        Error: Widget "{widgetInfo.w_type}" has no default export.
-      </div>
-    );
-  }
-
   return (
     <ErrorBoundary name={widgetInfo.w_type}>
-      {module.className && <style>{`${module.className}`}</style>}
-      <div
-        ref={containerRef}
-        style={{
-          position: "absolute",
-          top: windowTop ?? 0,
-          left: windowLeft ?? 0,
-          display: "inline-block",
-        }}
-      >
-        <Component output={output} error={error} run={run} />
-      </div>
+      {module.className && <style>{module.className}</style>}
+      <Component output={output} error={error} run={run} />
     </ErrorBoundary>
   );
 };
@@ -141,52 +118,42 @@ function App() {
   const [widgetId, setWidgetId] = useState(null);
   const [widgets, setWidgets] = useState([]);
 
-  // Memoize widgets to handle HMR correctly
   const widgetsData = useMemo(() => {
     return Object.keys(widgetModules).reduce((acc, path) => {
       const name = path.split("/")[2].replace(".widget", "");
       acc[name] = widgetModules[path];
       return acc;
     }, {});
-  }, [widgetModules]);
+  }, []);
 
   useEffect(() => {
-    const currentWindow = getCurrentWindow();
-    const label = currentWindow.label;
+    const win = getCurrentWindow();
+    const label = win.label;
 
     if (label === "control") {
       setIsControlWindow(true);
       document.documentElement.style.backgroundColor = "#0a0a0a";
-    } else if (label.startsWith("widget-")) {
-      const id = label.replace("widget-", "");
-      setWidgetId(id);
+      return;
+    }
 
+    if (label.startsWith("widget-")) {
+      setWidgetId(label.replace("widget-", ""));
       invoke("get_widgets").then(setWidgets);
-
-      listen("widgets-update", (event) => {
-        setWidgets(event.payload);
-      });
+      listen("widgets-update", (e) => setWidgets(e.payload));
     }
   }, []);
 
-  if (isControlWindow) {
-    return <ControlPanel />;
-  }
+  if (isControlWindow) return <ControlPanel />;
 
-  if (widgetId) {
-    const widget = widgets.find((w) => w.id === widgetId);
-    if (!widget) return null;
+  if (!widgetId) return null;
 
-    const module = widgetsData[widget.w_type];
+  const widget = widgets.find((w) => w.id === widgetId);
+  if (!widget) return null;
 
-    return (
-      <div className="w-screen h-screen overflow-hidden bg-transparent pointer-events-none relative">
-        <WidgetHandler widgetInfo={widget} module={module} />
-      </div>
-    );
-  }
+  const module = widgetsData[widget.w_type];
+  if (!module) return null;
 
-  return <div />;
+  return <WidgetHandler widgetInfo={widget} module={module} />;
 }
 
 export default App;

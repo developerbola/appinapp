@@ -9,6 +9,8 @@ import {
   Trash,
   EllipsisVertical,
   Monitor,
+  CirclePlus,
+  CircleMinus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -89,16 +91,17 @@ const ControlPanel = () => {
   const addWidget = async (type) => {
     console.log("ControlPanel: Requesting to add widget of type:", type);
     try {
-      // Find the module for this type to check for isBackground export
       const modulePath = Object.keys(widgetModules).find((path) =>
         path.includes(`${type}.widget/index.jsx`)
       );
       const module = modulePath ? widgetModules[modulePath] : null;
-      const isBackground = module?.isBackground;
 
       await invoke("add_widget", {
         wType: type,
-        isBackground: isBackground,
+        x: module?.windowLeft ?? 100,
+        y: module?.windowTop ?? 100,
+        width: module?.windowWidth ?? 300,
+        height: module?.windowHeight ?? 200,
       });
       await fetchWidgets();
     } catch (err) {
@@ -203,10 +206,13 @@ const ControlPanel = () => {
                 </h2>
                 <Separator className="flex-1 bg-white/5" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                 {Object.entries(widgetTypes).map(([type, meta]) => (
-                  <div key={type} className="bg-[#ffffff15]">
-                    <div className="p-4 py-2 flex items-center gap-4">
+                  <div
+                    key={type}
+                    className="bg-[#ffffff10] border border-[#ffffff05] border-l-2 border-l-[#ffffff40]"
+                  >
+                    <div className="pl-4 pr-2 py-1 flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="font-bold text-sm tracking-tight">
                           {meta.label}
@@ -214,21 +220,39 @@ const ControlPanel = () => {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger>
-                          <Button variant="secondary" size="icon-sm">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className={"opacity-60"}
+                          >
                             <EllipsisVertical className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => addWidget(type)}>
-                            Add
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>Remove</DropdownMenuItem>
-                          <DropdownMenuItem>
-                            Send to background
-                          </DropdownMenuItem>
+                          {[
+                            {
+                              label: "Add",
+                              icon: <CirclePlus className="w-4 h-4" />,
+                              onClick: () => addWidget(type),
+                            },
+                            {
+                              label: "Delete",
+                              icon: <Trash className="w-4 h-4" />,
+                              onClick: () => removeWidget(type),
+                              danger: true,
+                            },
+                          ].map((item) => (
+                            <DropdownMenuItem
+                              key={item.label}
+                              onClick={item.onClick}
+                              className="flex items-center justify-between gap-3 menuItem"
+                            >
+                              <span>{item.label}</span>
+                              {item.icon}
+                            </DropdownMenuItem>
+                          ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      {/* <Plus className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" /> */}
                     </div>
                   </div>
                 ))}
@@ -242,7 +266,7 @@ const ControlPanel = () => {
                 </h2>
                 <Separator className="flex-1 bg-white/5" />
               </div>
-              <div className="space-y-3">
+              <div className="flex flex-col gap-1">
                 {widgets.map((w) => {
                   const meta = widgetTypes[w.w_type] || {
                     label: "Unknown",
@@ -251,7 +275,7 @@ const ControlPanel = () => {
                   return (
                     <div
                       key={w.id}
-                      className="bg-[#ffffff10] border-white/5 border-l-2"
+                      className="bg-[#ffffff10] border-l-2"
                       style={{ borderLeftColor: "#ffffff90" }}
                     >
                       <div className="p-4 py-2 flex items-center gap-4">
@@ -289,7 +313,7 @@ const ControlPanel = () => {
                             })()}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex">
                           <Button
                             size="icon"
                             variant="ghost"
@@ -315,7 +339,7 @@ const ControlPanel = () => {
                             className={"text-destructive border-none"}
                             onClick={() => removeWidget(w.id)}
                           >
-                            <Trash className="w-4 h-4" />
+                            <CircleMinus className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -325,10 +349,10 @@ const ControlPanel = () => {
                 {widgets.length === 0 && (
                   <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/1">
                     <p className="text-xs text-zinc-600 font-medium">
-                      NO ACTIVE SUBPROCESSES DETECTED
+                      NO ACTIVE PROCESSES
                     </p>
-                    <p className="text-[10px] text-zinc-700 mt-1 uppercase tracking-tighter">
-                      Initialize blueprint to begin execution
+                    <p className="text-[12px] text-zinc-700 mt-1 tracking-tighter">
+                      Add widgets to begin
                     </p>
                   </div>
                 )}

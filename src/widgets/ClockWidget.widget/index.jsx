@@ -10,13 +10,11 @@ const ClockWidget = () => {
 
   return (
     <div
-      className="widget w-fit h-fit"
+      className="widget w-screen h-screen bg-neutral-900 flex flex-col items-center justify-center"
       style={{
         pointerEvents: "auto",
         color: "#fff",
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-        background: "#111",
-        padding: "20px 30px",
         borderRadius: "16px",
         display: "flex",
         flexDirection: "column",
@@ -39,12 +37,11 @@ const ClockWidget = () => {
           margin: 0,
           opacity: 0.7,
           fontWeight: 400,
-          textTransform: "uppercase",
           letterSpacing: "2px",
         }}
       >
         {time.toLocaleDateString(undefined, {
-          weekday: "long",
+          weekday: "short",
           month: "long",
           day: "numeric",
         })}
@@ -53,8 +50,9 @@ const ClockWidget = () => {
   );
 };
 
-export const windowTop = 100;
-export const windowLeft = 100;
-export const isBackground = true;
+export const windowTop = 50;
+export const windowLeft = 50;
+export const windowHeight = 170;
+export const windowWidth = 280;
 
 export default ClockWidget;

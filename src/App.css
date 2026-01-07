@@ -75,7 +75,6 @@
 
 * {
   box-sizing: border-box;
-  user-select: none !important;
   font-family: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
@@ -84,16 +83,12 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: transparent !important;
 }
 
 #root {
   position: relative;
 }
 
-.widget {
-  position: relative;
-  pointer-events: auto;
-  transform: translateZ(0);
-  will-change: backdrop-filter;
+.menuItem:hover {
+  background: #ffffff15;
 }

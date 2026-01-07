@@ -10,13 +10,13 @@ const Todo = () => {
       setNewTask("");
     }
   };
+  let son;
 
   return (
     <div
-      className="widget"
+      className="widget bg-zinc-900"
       style={{
         pointerEvents: "auto",
-        background: "rgba(10, 10, 10, 0.8)",
         color: "#fff",
         padding: "20px",
         borderRadius: "20px",
@@ -34,7 +34,7 @@ const Todo = () => {
         }}
       >
         <h1 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 600 }}>
-          Tasks
+          Tasks ({son})
         </h1>
         <span style={{ fontSize: "0.8rem", opacity: 0.5 }}>
           {tasks.length} total
@@ -116,8 +116,9 @@ const Todo = () => {
   );
 };
 
-export const windowTop = 100;
-export const windowLeft = 500;
-export const isBackground = false;
+export const windowTop = 15;
+export const windowLeft = 100;
+export const windowHeight = 100;
+export const windowWidth = 300;
 
 export default Todo;
