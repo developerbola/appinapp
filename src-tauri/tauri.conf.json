@@ -31,7 +31,7 @@
         "height": 500,
         "visible": false,
         "shadow": false,
-        "transparent": false,
+        "transparent": true,
         "resizable": false,
         "maximizable": false,
         "minimizable": false,

@@ -4,7 +4,6 @@ import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Terminal,
   RefreshCw,
   Trash,
   EllipsisVertical,
@@ -19,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "./components/ui/input";
 import FolderSelect from "./components/FolderSelect";
 import { Checkbox } from "./components/ui/checkbox";
 import { Label } from "./components/ui/label";
@@ -138,10 +136,10 @@ const ControlPanel = () => {
       <div
         data-tauri-drag-region
         id="titlebar"
-        className="fixed inset-0 h-7 w-full z-9999 bg-[#00000020] backdrop-blur-xl select-none!"
+        className="fixed inset-0 h-7 w-full z-9999 backdrop-blur-xl select-none!"
       />
-      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#09090b] text-zinc-100 font-sans selection:bg-white/10 pt-7 hide-scrollbar">
-        <header className="flex items-center justify-between px-6 py-3 border-b border-[#ffffff12] bg-black/20 backdrop-blur-md">
+      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#000000b2] text-zinc-100 font-sans pt-7 hide-scrollbar">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-[#ffffff12] bg-black/20 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <h1 className="text-xl">Control</h1>
           </div>
@@ -171,7 +169,7 @@ const ControlPanel = () => {
               />
             </Button>
           </div>
-        </header>
+        </div>
 
         {isSettings ? (
           <div>
@@ -215,15 +213,15 @@ const ControlPanel = () => {
                     <div className="flex items-end gap-2">
                       <span className="text-3xl font-bold font-mono">
                         {Math.floor(uptime / 60) < 10 && (
-                          <span className="text-muted">0</span>
+                          <span className="text-[#ffffff30]">0</span>
                         )}
                         {Math.floor(uptime / 60)}
-                        <span className="text-sm text-muted">M</span>{" "}
+                        <span className="text-sm text-[#ffffff30]">M</span>{" "}
                         {Math.floor(uptime % 60) < 10 && (
-                          <span className="text-muted">0</span>
+                          <span className="text-[#ffffff30]">0</span>
                         )}
                         {uptime % 60}
-                        <span className="text-sm text-muted">S</span>
+                        <span className="text-sm text-[#ffffff30]">S</span>
                       </span>
                     </div>
                   </div>
@@ -390,7 +388,7 @@ const ControlPanel = () => {
                 </div>
               </div>
             </div>
-            <footer className="px-6 py-3 border-t border-[#ffffff10] bg-black/40 backdrop-blur-md">
+            <div className="px-6 py-3 border-t border-[#ffffff10] bg-black/40 backdrop-blur-md">
               <div className="flex items-center justify-between text-[10px] text-neutral-600 font-mono tracking-tighter">
                 <div className="flex gap-2">
                   MEMORY:
@@ -402,7 +400,7 @@ const ControlPanel = () => {
                   usage of this app
                 </div>
               </div>
-            </footer>
+            </div>
           </div>
         )}
       </div>
