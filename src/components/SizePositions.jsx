@@ -3,7 +3,7 @@ import { Label } from "./ui/label";
 
 const SizePositions = () => {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2 w-[90%]">
       <div className="flex justify-between">
         <Label htmlFor={"h"}>height:</Label>
         <div className="relative">
@@ -11,7 +11,7 @@ const SizePositions = () => {
             id={"h"}
             type="number"
             placeholder="500"
-            className="p-2 pr-7 w-19 h-7"
+            className="p-2 pr-7 w-18.75 h-7"
           />
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center pr-3 text-sm peer-disabled:opacity-50">
             px
@@ -25,7 +25,7 @@ const SizePositions = () => {
             id={"w"}
             type="number"
             placeholder="500"
-            className="p-2 pr-7 w-19 h-7"
+            className="p-2 pr-7 w-18.75 h-7"
           />
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center pr-3 text-sm peer-disabled:opacity-50">
             px
@@ -39,7 +39,7 @@ const SizePositions = () => {
             id={"x"}
             type="number"
             placeholder="500"
-            className="p-2 pr-7 w-19 h-7"
+            className="p-2 pr-7 w-18.75 h-7"
           />
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center pr-3 text-sm peer-disabled:opacity-50">
             px
@@ -53,7 +53,7 @@ const SizePositions = () => {
             id={"y"}
             type="number"
             placeholder="500"
-            className="p-2 pr-7 w-19 h-7"
+            className="p-2 pr-7 w-18.75 h-7"
           />
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center pr-3 text-sm peer-disabled:opacity-50">
             px

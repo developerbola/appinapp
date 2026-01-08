@@ -6,7 +6,7 @@ const AlwaysOn = () => {
 
   return (
     <div className="flex items-center justify-between px-3">
-      <span className="font-normal text-[14px]">AlwaysOn</span>
+      <span className="font-normal text-[14px]">Always on</span>
       <ToggleGroup
         type="single"
         size={"sm"}

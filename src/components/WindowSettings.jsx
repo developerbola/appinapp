@@ -1,8 +1,6 @@
 import { Settings2, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Activity, useState } from "react";
-import { Label } from "./ui/label";
-import { Input } from "./ui/input";
 import AcrylicWindow from "./AcrylicWindow";
 import AlwaysOn from "./AlwaysOn";
 import SizePositions from "./SizePositions";
@@ -25,7 +23,7 @@ const WindowSettings = ({ w }) => {
           onClick={() => setOpen(false)}
         >
           <div
-            className="min-h-1/2 w-[80%] bg-black rounded-md border border-[#ffffff17] p-3 px-4"
+            className="w-[80%] bg-[#111] rounded-md border border-[#ffffff17] p-3 px-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between">
