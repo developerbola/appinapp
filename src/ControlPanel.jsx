@@ -20,6 +20,7 @@ import {
 import FolderSelect from "./components/FolderSelect";
 import LaunchLogin from "./components/LaunchLogin";
 import WindowSettings from "./components/WindowSettings";
+import Uptime from "./components/Uptime";
 
 const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
@@ -27,7 +28,7 @@ const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
 
 const ControlPanel = () => {
   const [widgets, setWidgets] = useState([]);
-  const [uptime, setUptime] = useState(0);
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
     total: { cpu_usage: 0, memory_usage: 0 },
@@ -82,11 +83,9 @@ const ControlPanel = () => {
     fetchStats();
     const statsTimer = setInterval(fetchStats, 2000);
 
-    const timer = setInterval(() => setUptime((u) => u + 1), 1000);
 
     return () => {
       unlisten.then((f) => f());
-      clearInterval(timer);
       clearInterval(statsTimer);
     };
   }, []);
@@ -180,7 +179,7 @@ const ControlPanel = () => {
         <Activity mode={isSettings ? "hidden" : "visible"}>
           <div>
             <div className="p-6 pt-1 space-y-8 max-w-4xl mx-auto">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <div>
                   <div className="p-4 flex flex-col gap-1">
                     <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
@@ -194,25 +193,7 @@ const ControlPanel = () => {
                   </div>
                 </div>
                 <div>
-                  <div className="p-4 flex flex-col gap-1">
-                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                      Uptime
-                    </span>
-                    <div className="flex items-end gap-2">
-                      <span className="text-3xl font-bold font-mono">
-                        {Math.floor(uptime / 60) < 10 && (
-                          <span className="text-[#ffffff30]">0</span>
-                        )}
-                        {Math.floor(uptime / 60)}
-                        <span className="text-sm text-[#ffffff30]">M</span>{" "}
-                        {Math.floor(uptime % 60) < 10 && (
-                          <span className="text-[#ffffff30]">0</span>
-                        )}
-                        {uptime % 60}
-                        <span className="text-sm text-[#ffffff30]">S</span>
-                      </span>
-                    </div>
-                  </div>
+                  <Uptime />
                 </div>
               </div>
 

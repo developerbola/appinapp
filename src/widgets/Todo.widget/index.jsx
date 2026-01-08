@@ -14,7 +14,7 @@ const Todo = () => {
 
   return (
     <div
-      className="widget bg-zinc-900"
+      className="widget bg-zinc-900 h-screen"
       style={{
         pointerEvents: "auto",
         color: "#fff",
@@ -117,8 +117,8 @@ const Todo = () => {
 };
 
 export const windowTop = 15;
-export const windowLeft = 100;
-export const windowHeight = 100;
+export const windowLeft = 400;
+export const windowHeight = 200;
 export const windowWidth = 300;
 
 export default Todo;
