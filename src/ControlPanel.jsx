@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Trash,
   EllipsisVertical,
-  Monitor,
   CirclePlus,
   CircleMinus,
   Settings,
@@ -19,8 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import FolderSelect from "./components/FolderSelect";
-import { Checkbox } from "./components/ui/checkbox";
-import { Label } from "./components/ui/label";
+import LaunchLogin from "./components/LaunchLogin";
 
 const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
@@ -122,15 +120,6 @@ const ControlPanel = () => {
     }
   };
 
-  const toggleWidgetBackground = async (id, isBackground) => {
-    try {
-      await invoke("set_widget_background", { id, background: !isBackground });
-      await fetchWidgets();
-    } catch (err) {
-      console.error("Failed to toggle background:", err);
-    }
-  };
-
   return (
     <>
       <div
@@ -174,12 +163,8 @@ const ControlPanel = () => {
         {isSettings ? (
           <div>
             <div className="p-6 pt-4 flex flex-col gap-2 max-w-4xl mx-auto">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={"launch"}
-                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
-                />
-                <Label htmlFor="launch">Launch when login</Label>
+              <div>
+                <LaunchLogin />
               </div>
               <div>
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
@@ -343,25 +328,6 @@ const ControlPanel = () => {
                             </p>
                           </div>
                           <div className="flex">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className={`${
-                                w.is_background
-                                  ? "text-blue-400 bg-blue-400/10"
-                                  : "text-zinc-500"
-                              } border-none`}
-                              onClick={() =>
-                                toggleWidgetBackground(w.id, w.is_background)
-                              }
-                              title={
-                                w.is_background
-                                  ? "Move to Foreground"
-                                  : "Send to Background"
-                              }
-                            >
-                              <Monitor className="w-4 h-4" />
-                            </Button>
                             <Button
                               size="icon"
                               variant="ghost"

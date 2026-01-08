@@ -86,36 +86,6 @@ fn add_widget(
 }
 
 #[tauri::command]
-fn set_widget_background(app: tauri::AppHandle, state: tauri::State<AppState>, id: String) {
-    let mut widgets = state.widgets.lock().unwrap();
-    if let Some(_w) = widgets.iter_mut().find(|w| w.id == id) {
-        if let Some(window) = app.get_webview_window(&format!("widget-{}", id)) {
-            #[cfg(target_os = "macos")]
-            {
-                use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
-                use cocoa::base::id as cocoa_id;
-
-                extern "C" {
-                    pub fn CGWindowLevelForKey(key: i32) -> i32;
-                }
-
-                let ns_window = window.ns_window().unwrap() as cocoa_id;
-                unsafe {
-                    let level = CGWindowLevelForKey(3);
-                    ns_window.setLevel_(level as i64);
-                    ns_window.setCollectionBehavior_(
-                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
-                            | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary,
-                    );
-                }
-            }
-        }
-    }
-
-    let _ = app.emit("widgets-update", widgets.clone());
-}
-
-#[tauri::command]
 fn remove_widget(app: tauri::AppHandle, state: tauri::State<AppState>, id: String) {
     let mut widgets = state.widgets.lock().unwrap();
     widgets.retain(|w| w.id != id);
@@ -192,8 +162,7 @@ pub fn run() {
             add_widget,
             remove_widget,
             get_app_stats,
-            execute_command,
-            set_widget_background
+            execute_command
         ])
         .setup(move |app| {
             #[cfg(target_os = "macos")]
