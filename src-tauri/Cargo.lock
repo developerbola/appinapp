@@ -48,6 +48,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
+name = "appinapp"
+version = "0.1.0"
+dependencies = [
+ "cocoa",
+ "core-graphics 0.25.0",
+ "image",
+ "objc",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "uuid",
+]
+
+[[package]]
 name = "ashpd"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3779,24 +3797,6 @@ dependencies = [
  "webview2-com",
  "window-vibrancy",
  "windows 0.61.3",
-]
-
-[[package]]
-name = "appinapp"
-version = "0.1.0"
-dependencies = [
- "cocoa",
- "core-graphics 0.25.0",
- "image",
- "objc",
- "serde",
- "serde_json",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "uuid",
 ]
 
 [[package]]

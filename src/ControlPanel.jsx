@@ -134,7 +134,7 @@ const ControlPanel = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={"outline"}
+              variant={"ghost"}
               size="icon"
               className={`size-8 duration-50 ${isSettings && "bg-border"}`}
               onClick={() => setIsSettings(!isSettings)}
@@ -142,12 +142,12 @@ const ControlPanel = () => {
               <Settings className={"size-4 opacity-70"} />
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
               className={`size-8 ${
                 isRefreshing
                   ? "bg-[#00c95030] border-[#00c95060] text-green-400"
-                  : "text-zinc-500"
+                  : "text-[#ffffff90]"
               }`}
               onClick={fetchWidgets}
             >

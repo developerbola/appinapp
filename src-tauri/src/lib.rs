@@ -168,17 +168,16 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             #[cfg(target_os = "macos")]
-  {
-        if let Some(control) = app.get_webview_window("control") {
-            // Use the window effects API
-            control.set_effects(
-                tauri::window::EffectsBuilder::new()
-                    .effect(tauri::window::Effect::HudWindow)
-                    .state(tauri::window::EffectState::Active)
-                    .build()
-            ).unwrap();
-        }
-    }
+            {
+                    if let Some(control) = app.get_webview_window("control") {
+                        control.set_effects(
+                            tauri::window::EffectsBuilder::new()
+                                .effect(tauri::window::Effect::HudWindow)
+                                .state(tauri::window::EffectState::Active)
+                                .build()
+                        ).unwrap();
+                    }
+                }
             let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = tauri::menu::MenuItem::with_id(
                 app,
@@ -187,15 +186,8 @@ pub fn run() {
                 true,
                 None::<&str>,
             )?;
-            let debug_i = tauri::menu::MenuItem::with_id(
-                app,
-                "show_debug",
-                "Show debug consoles",
-                true,
-                None::<&str>,
-            )?;
 
-            let menu = tauri::menu::Menu::with_items(app, &[&show_i, &debug_i, &quit_i])?;
+            let menu = tauri::menu::Menu::with_items(app, &[&show_i, &quit_i])?;
 
             let icon_img = image::load_from_memory(include_bytes!("../icons/tray.png"))
                 .expect("failed to load tray icon")
@@ -213,11 +205,6 @@ pub fn run() {
                         if let Some(w) = app.get_webview_window("control") {
                             let _ = w.show();
                             let _ = w.set_focus();
-                        }
-                    }
-                    "show_debug" => {
-                        for (_, w) in app.webview_windows() {
-                            w.open_devtools();
                         }
                     }
                     _ => {}
