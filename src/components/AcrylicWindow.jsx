@@ -7,7 +7,7 @@ const AcrylicWindow = () => {
 
   return (
     <Label
-      className={`border border-[#ffffff18] relative flex items-center justify-between rounded-md p-2 px-3 ${enabled && "border-[#155dfc60] bg-[#155dfc30]"}`}
+      className={`mt-1 border border-[#ffffff18] relative flex items-center justify-between rounded-md p-2 px-3 ${enabled && "border-[#155dfc60] bg-[#155dfc30]"}`}
     >
       <span className="font-normal">Acrylic window</span>
       <Switch

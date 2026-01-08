@@ -19,21 +19,21 @@ const AlwaysOn = () => {
         <ToggleGroupItem
           value="bottom"
           aria-label="Toggle bottom"
-          className={`cursor-pointer text-[#ffffff40] px-0 ${alwaysOn == "bottom" && "text-white"}`}
+          className={`bg-transparent! cursor-pointer text-[#ffffff40] px-0 ${alwaysOn == "bottom" && "text-white"}`}
         >
           bottom
         </ToggleGroupItem>
         <ToggleGroupItem
           value="none"
           aria-label="Toggle none"
-          className={`cursor-pointer text-[#ffffff40] px-0 ${alwaysOn == "none" && "text-white"}`}
+          className={`bg-transparent! cursor-pointer text-[#ffffff40] px-0 ${alwaysOn == "none" && "text-white"}`}
         >
           none
         </ToggleGroupItem>
         <ToggleGroupItem
           value="top"
           aria-label="Toggle top"
-          className={`cursor-pointer text-[#ffffff40] px-0 ${alwaysOn == "top" && "text-white"}`}
+          className={`bg-transparent! cursor-pointer text-[#ffffff40] px-0 ${alwaysOn == "top" && "text-white"}`}
         >
           top
         </ToggleGroupItem>
