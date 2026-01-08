@@ -96,3 +96,29 @@ body {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+
+
+[data-slot="switch"][data-state="unchecked"]{
+  @apply bg-[#ffffff20]
+}
+[data-slot="switch"][data-state="checked"]{
+  @apply bg-blue-600
+}
+
+[data-slot="switch-thumb"][data-state="checked"]{
+  @apply bg-white translate-x-[calc(100%-2px)] 
+}
+[data-slot="switch-thumb"][data-state="unchecked"]{
+  @apply bg-black
+}

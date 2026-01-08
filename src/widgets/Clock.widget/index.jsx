@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const ClockWidget = () => {
+const Clock = () => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -55,4 +55,4 @@ export const windowLeft = 50;
 export const windowHeight = 170;
 export const windowWidth = 280;
 
-export default ClockWidget;
+export default Clock;

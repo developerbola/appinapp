@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Activity } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import FolderSelect from "./components/FolderSelect";
 import LaunchLogin from "./components/LaunchLogin";
+import WindowSettings from "./components/WindowSettings";
 
 const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
@@ -40,7 +41,7 @@ const ControlPanel = () => {
       const name = path.split("/")[2].replace(".widget", "");
 
       const labels = {
-        ClockWidget: {
+        Clock: {
           label: "Clock",
         },
       };
@@ -160,7 +161,7 @@ const ControlPanel = () => {
           </div>
         </div>
 
-        {isSettings ? (
+        <Activity mode={isSettings ? "visible" : "hidden"}>
           <div>
             <div className="p-6 pt-4 flex flex-col gap-2 max-w-4xl mx-auto">
               <div>
@@ -174,7 +175,9 @@ const ControlPanel = () => {
               </div>
             </div>
           </div>
-        ) : (
+        </Activity>
+
+        <Activity mode={isSettings ? "hidden" : "visible"}>
           <div>
             <div className="p-6 pt-1 space-y-8 max-w-4xl mx-auto">
               <div className="grid grid-cols-2 gap-2">
@@ -292,17 +295,17 @@ const ControlPanel = () => {
                         className="bg-[#ffffff10] border-l-2"
                         style={{ borderLeftColor: "#ffffff90" }}
                       >
-                        <div className="p-4 py-2 flex items-center gap-4">
+                        <div className="p-4 py-2 pr-2 flex items-center gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold tracking-tight">
+                              <h4 className="text-sm font-bold tracking-tight w-fill max-w-[65%] whitespace-nowrap overflow-hidden">
                                 {meta.label}
                               </h4>
-                              <span className="text-[9px] font-mono text-zinc-600 px-1.5 py-0.5 bg-black/50 rounded uppercase">
+                              <span className="text-[9px] font-mono text-zinc-600 px-1.5 py-0.5 bg-[#00000020] rounded uppercase">
                                 PID: {w.id.substring(0, 8)}
                               </span>
                             </div>
-                            <p className="text-[10px] text-zinc-500 font-mono italic">
+                            <p className="text-[9px] text-[#ffffff30] font-mono italic">
                               {(() => {
                                 const count = widgets.length || 1;
                                 const share = 1 / count;
@@ -329,13 +332,14 @@ const ControlPanel = () => {
                           </div>
                           <div className="flex">
                             <Button
-                              size="icon"
+                              size="icon-sm"
                               variant="ghost"
                               className={"text-destructive border-none"}
                               onClick={() => removeWidget(w.id)}
                             >
                               <CircleMinus className="w-4 h-4" />
                             </Button>
+                            <WindowSettings w={w} />
                           </div>
                         </div>
                       </div>
@@ -368,7 +372,7 @@ const ControlPanel = () => {
               </div>
             </div>
           </div>
-        )}
+        </Activity>
       </div>
     </>
   );
