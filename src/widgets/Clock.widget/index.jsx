@@ -10,12 +10,12 @@ const Clock = () => {
 
   return (
     <div
-      className="widget w-screen h-screen bg-neutral-900 flex flex-col items-center justify-center"
+      className="relative widget w-screen h-screen bg-[#00000057] flex flex-col items-center justify-center"
       style={{
         pointerEvents: "auto",
         color: "#fff",
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-        borderRadius: "16px",
+        borderRadius: 7,
         display: "flex",
         flexDirection: "column",
         gap: "5px",

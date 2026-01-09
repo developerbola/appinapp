@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "control"],
+  "windows": ["main", "control","widget-*"],
   "permissions": [
     "core:default",
     "opener:default",
@@ -10,6 +10,14 @@
     "core:window:default",
     "core:window:allow-start-dragging",
     "dialog:default",
+    "core:event:allow-listen",
+    "core:window:allow-current-monitor",
+    "core:window:allow-scale-factor",
+    "core:window:allow-set-size",
+    "core:window:allow-set-always-on-bottom",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-position",
+    "core:window:allow-set-effects",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "**" }]

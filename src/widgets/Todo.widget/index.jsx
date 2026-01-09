@@ -14,12 +14,12 @@ const Todo = () => {
 
   return (
     <div
-      className="widget bg-zinc-900 h-screen"
+      className="widget bg-[#0000002b] h-screen"
       style={{
         pointerEvents: "auto",
         color: "#fff",
         padding: "20px",
-        borderRadius: "20px",
+        borderRadius: 7,
         width: "300px",
         display: "flex",
         flexDirection: "column",

@@ -38,9 +38,9 @@ const WindowSettings = ({ w }) => {
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2">
-              <SizePositions />
-              <AcrylicWindow />
-              <AlwaysOn />
+              <SizePositions w={w} />
+              <AcrylicWindow w={w} />
+              <AlwaysOn w={w} />
             </div>
           </div>
         </div>

@@ -54,7 +54,6 @@ fn add_widget(
     .position(win_x, win_y)
     .resizable(false)
     .shadow(false)
-    .visible_on_all_workspaces(true)
     .build()
     .unwrap();
 
@@ -78,10 +77,6 @@ fn add_widget(
         }
     }
 
-    println!(
-        "Backend: Emitting widgets-update with {} widgets",
-        widgets.len()
-    );
     let _ = app.emit("widgets-update", widgets.clone());
 }
 
@@ -165,13 +160,12 @@ pub fn run() {
             execute_command
         ])
         .setup(move |app| {
-
-             if let Some(window) = app.get_webview_window("control") {
-                let window_clone = window.clone();  // Clone for the closure
+            if let Some(window) = app.get_webview_window("control") {
+                let window_clone = window.clone(); // Clone for the closure
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
-                        let _ = window_clone.hide();  // Use the clone
+                        let _ = window_clone.hide(); // Use the clone
                     }
                 });
             }
@@ -180,16 +174,17 @@ pub fn run() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             #[cfg(target_os = "macos")]
             {
-                    if let Some(control) = app.get_webview_window("control") {
-                        control.set_effects(
+                if let Some(control) = app.get_webview_window("control") {
+                    control
+                        .set_effects(
                             tauri::window::EffectsBuilder::new()
                                 .effect(tauri::window::Effect::HudWindow)
                                 .state(tauri::window::EffectState::Active)
-                                .build()
-                    ).unwrap();
+                                .build(),
+                        )
+                        .unwrap();
                 }
             }
-
 
             let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = tauri::menu::MenuItem::with_id(

@@ -21,8 +21,7 @@
         "shadow": false,
         "resizable": false,
         "maximized": true,
-        "visible": true,
-        "visibleOnAllWorkspaces": true
+        "visible": true
       },
       {
         "label": "control",

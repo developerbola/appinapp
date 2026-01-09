@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import React, {
   useState,
   useEffect,
@@ -32,7 +32,7 @@ class ErrorBoundary extends ReactComponent {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="relative" style={{ color: "red", padding: 12 }}>
+        <div className="relative" style={{ color: "red", padding: 12, background: "#00000040", width: "100vw", height: "100vh", overflowY: "auto" }}>
           Widget crashed: {this.state.error?.message}
         </div>
       );

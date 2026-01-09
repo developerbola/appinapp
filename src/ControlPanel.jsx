@@ -91,7 +91,6 @@ const ControlPanel = () => {
   }, []);
 
   const addWidget = async (type) => {
-    console.log("ControlPanel: Requesting to add widget of type:", type);
     try {
       const modulePath = Object.keys(widgetModules).find((path) =>
         path.includes(`${type}.widget/index.jsx`)
