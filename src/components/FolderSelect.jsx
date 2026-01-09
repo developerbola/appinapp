@@ -3,9 +3,12 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { FolderInput, Loader2 } from "lucide-react";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { useAtom } from "jotai";
+import { widgetFolderAtom } from "@/atoms/atoms";
 
 export default function FolderSelect() {
-  const [folderPath, setFolderPath] = useState("");
+  const [folderPath, setFolderPath] = useAtom(widgetFolderAtom);
+
   const [isOpening, setIsOpening] = useState(false);
 
   const selectFolder = async () => {
@@ -25,7 +28,7 @@ export default function FolderSelect() {
 
   const openFolder = async () => {
     if (!folderPath || isOpening) return;
-    
+
     setIsOpening(true);
     try {
       await openPath(folderPath);

@@ -10,10 +10,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import ControlPanel from "./ControlPanel";
-
-const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
-  eager: true,
-});
+import { widgetFolderAtom } from "./atoms/atoms";
+import { useAtom } from "jotai";
 
 class ErrorBoundary extends ReactComponent {
   constructor(props) {
@@ -98,6 +96,11 @@ function App() {
   const [isControlWindow, setIsControlWindow] = useState(false);
   const [widgetId, setWidgetId] = useState(null);
   const [widgets, setWidgets] = useState([]);
+  const [widgetFolder, setWidgetFolder] = useAtom(widgetFolderAtom);
+
+  const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
+    eager: true,
+  });
 
   const widgetsData = useMemo(() => {
     return Object.keys(widgetModules).reduce((acc, path) => {
