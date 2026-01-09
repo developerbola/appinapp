@@ -59,7 +59,7 @@ fn add_widget(
 
     #[cfg(target_os = "macos")]
     {
-        use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+        use cocoa::appkit::NSWindow;
         extern "C" {
             pub fn CGWindowLevelForKey(key: i32) -> i32;
         }
@@ -69,10 +69,6 @@ fn add_widget(
             unsafe {
                 let level = CGWindowLevelForKey(3);
                 ns_window.setLevel_(level as i64);
-                ns_window.setCollectionBehavior_(
-                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
-                        | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary,
-                );
             }
         }
     }
@@ -157,7 +153,7 @@ pub fn run() {
             add_widget,
             remove_widget,
             get_app_stats,
-            execute_command
+            execute_command,
         ])
         .setup(move |app| {
             if let Some(window) = app.get_webview_window("control") {

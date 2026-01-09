@@ -1,4 +1,4 @@
-import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import React, {
   useState,
   useEffect,
@@ -32,7 +32,17 @@ class ErrorBoundary extends ReactComponent {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="relative" style={{ color: "red", padding: 12, background: "#00000040", width: "100vw", height: "100vh", overflowY: "auto" }}>
+        <div
+          className="relative"
+          style={{
+            color: "red",
+            padding: 12,
+            background: "#00000040",
+            width: "100vw",
+            height: "100vh",
+            overflowY: "auto",
+          }}
+        >
           Widget crashed: {this.state.error?.message}
         </div>
       );
@@ -48,41 +58,12 @@ const WidgetHandler = ({ widgetInfo, module }) => {
   const command = module.command;
   const refreshFrequency = module.refreshFrequency;
 
-  const {
-    windowTop = 0,
-    windowLeft = 0,
-    windowWidth = 300,
-    windowHeight = 200,
-  } = module;
-
   const [output, setOutput] = useState("");
   const [error, setError] = useState(null);
 
   const run = useCallback(async (cmd) => {
     return invoke("execute_command", { command: cmd });
   }, []);
-
-  useEffect(() => {
-    const positionWidget = async () => {
-      const win = getCurrentWindow();
-      const monitor = await currentMonitor();
-      if (monitor) {
-        const scaleFactor = monitor.scaleFactor;
-        const physicalSize = await convertLogicalToPhysical(
-          monitor.size,
-          scaleFactor
-        );
-        const adjustedY = physicalSize.height - windowHeight;
-        await win.setPosition({ x: 0, y: adjustedY, logical: false });
-        await win.setSize({
-          width: windowWidth,
-          height: windowHeight,
-          logical: false,
-        });
-      }
-    };
-    positionWidget();
-  }, [windowTop, windowLeft, windowWidth, windowHeight]);
 
   useEffect(() => {
     if (!command) return;
