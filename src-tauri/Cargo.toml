@@ -29,5 +29,7 @@ sysinfo = "0.33.1"
 objc = "0.2.7"
 cocoa = "0.26.1"
 tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2.0.0"
+
 
 

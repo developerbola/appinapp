@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use sysinfo::System;
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, Manager, State};
+use tauri_plugin_autostart::MacosLauncher;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 struct WidgetConfig {
@@ -14,14 +15,14 @@ struct AppState {
 }
 
 #[tauri::command]
-fn get_widgets(state: tauri::State<AppState>) -> Vec<WidgetConfig> {
+fn get_widgets(state: State<AppState>) -> Vec<WidgetConfig> {
     state.widgets.lock().unwrap().clone()
 }
 
 #[tauri::command]
 fn add_widget(
     app: tauri::AppHandle,
-    state: tauri::State<AppState>,
+    state: State<AppState>,
     w_type: String,
     x: Option<f64>,
     y: Option<f64>,
@@ -77,7 +78,7 @@ fn add_widget(
 }
 
 #[tauri::command]
-fn remove_widget(app: tauri::AppHandle, state: tauri::State<AppState>, id: String) {
+fn remove_widget(app: tauri::AppHandle, state: State<AppState>, id: String) {
     let mut widgets = state.widgets.lock().unwrap();
     widgets.retain(|w| w.id != id);
 
@@ -89,7 +90,7 @@ fn remove_widget(app: tauri::AppHandle, state: tauri::State<AppState>, id: Strin
 }
 
 #[tauri::command]
-fn get_app_stats(state: tauri::State<AppState>) -> serde_json::Value {
+fn get_app_stats(state: State<AppState>) -> serde_json::Value {
     let mut sys = state.sys.lock().unwrap();
     sys.refresh_all();
 
@@ -139,11 +140,38 @@ async fn execute_command(command: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+async fn set_launch_at_login(app: tauri::AppHandle, enable: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    
+    let autostart_manager = app.autolaunch();
+    
+    if enable {
+        autostart_manager.enable().map_err(|e| e.to_string())?;
+    } else {
+        autostart_manager.disable().map_err(|e| e.to_string())?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn is_launch_at_login_enabled(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    
+    let autostart_manager = app.autolaunch();
+    autostart_manager.is_enabled().map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .manage(AppState {
             widgets: Arc::new(Mutex::new(vec![])),
             sys: Arc::new(Mutex::new(System::new_all())),
@@ -154,31 +182,32 @@ pub fn run() {
             remove_widget,
             get_app_stats,
             execute_command,
+            set_launch_at_login,
+            is_launch_at_login_enabled
         ])
-        .setup(move |app| {
+        .setup(|app| {
             if let Some(window) = app.get_webview_window("control") {
-                let window_clone = window.clone(); // Clone for the closure
+                let window_clone = window.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
-                        let _ = window_clone.hide(); // Use the clone
+                        let _ = window_clone.hide();
                     }
                 });
             }
 
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            
             #[cfg(target_os = "macos")]
             {
                 if let Some(control) = app.get_webview_window("control") {
-                    control
-                        .set_effects(
-                            tauri::window::EffectsBuilder::new()
-                                .effect(tauri::window::Effect::HudWindow)
-                                .state(tauri::window::EffectState::Active)
-                                .build(),
-                        )
-                        .unwrap();
+                    let _ = control.set_effects(
+                        tauri::window::EffectsBuilder::new()
+                            .effect(tauri::window::Effect::HudWindow)
+                            .state(tauri::window::EffectState::Active)
+                            .build(),
+                    );
                 }
             }
 
@@ -199,7 +228,7 @@ pub fn run() {
             let (w, h) = icon_img.dimensions();
             let tray_icon = tauri::image::Image::new_owned(icon_img.into_vec(), w, h);
 
-            tauri::tray::TrayIconBuilder::new()
+            let _tray = tauri::tray::TrayIconBuilder::new()
                 .icon(tray_icon)
                 .menu(&menu)
                 .show_menu_on_left_click(true)
