@@ -9,7 +9,8 @@ import {
   EllipsisVertical,
   CirclePlus,
   CircleMinus,
-  Settings,
+  Settings as SettingsIcon,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,10 +18,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import FolderSelect from "./components/FolderSelect";
-import LaunchLogin from "./components/LaunchLogin";
 import WindowSettings from "./components/WindowSettings";
 import Uptime from "./components/Uptime";
+import Settings from "./sections/Settings";
+import Gallery from "./sections/Gallery";
 
 const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
   eager: true,
@@ -28,14 +29,14 @@ const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
 
 const ControlPanel = () => {
   const [widgets, setWidgets] = useState([]);
-  
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
     total: { cpu_usage: 0, memory_usage: 0 },
     main: { cpu: 0, memory: 0 },
     renderer: { cpu: 0, memory: 0 },
   });
-  const [isSettings, setIsSettings] = useState(false);
+  const [active, setActive] = useState("control");
 
   const widgetTypes = useMemo(() => {
     return Object.keys(widgetModules).reduce((acc, path) => {
@@ -82,7 +83,6 @@ const ControlPanel = () => {
 
     fetchStats();
     const statsTimer = setInterval(fetchStats, 2000);
-
 
     return () => {
       unlisten.then((f) => f());
@@ -136,10 +136,28 @@ const ControlPanel = () => {
             <Button
               variant={"ghost"}
               size="icon"
-              className={`size-8 duration-50 ${isSettings && "bg-border"}`}
-              onClick={() => setIsSettings(!isSettings)}
+              className={`size-8 duration-50 ${
+                active == "gallery" && "bg-border"
+              }`}
+              onClick={() =>
+                setActive((prev) => (prev == "gallery" ? "control" : "gallery"))
+              }
             >
-              <Settings className={"size-4 opacity-70"} />
+              <LayoutDashboard className={"size-4 opacity-70"} />
+            </Button>
+            <Button
+              variant={"ghost"}
+              size="icon"
+              className={`size-8 duration-50 ${
+                active == "settings" && "bg-border"
+              }`}
+              onClick={() =>
+                setActive((prev) =>
+                  prev == "settings" ? "control" : "settings"
+                )
+              }
+            >
+              <SettingsIcon className={"size-4 opacity-70"} />
             </Button>
             <Button
               variant="ghost"
@@ -160,23 +178,15 @@ const ControlPanel = () => {
           </div>
         </div>
 
-        <Activity mode={isSettings ? "visible" : "hidden"}>
-          <div>
-            <div className="p-6 pt-4 flex flex-col gap-2 max-w-4xl mx-auto">
-              <div>
-                <LaunchLogin />
-              </div>
-              <div>
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                  Widgets folder
-                </span>
-                <FolderSelect />
-              </div>
-            </div>
-          </div>
+        <Activity mode={active !== "gallery" ? "hidden" : "visible"}>
+          <Gallery />
         </Activity>
 
-        <Activity mode={isSettings ? "hidden" : "visible"}>
+        <Activity mode={active !== "settings" ? "hidden" : "visible"}>
+          <Settings />
+        </Activity>
+
+        <Activity mode={active !== "control" ? "hidden" : "visible"}>
           <div>
             <div className="p-6 pt-1 space-y-8 max-w-4xl mx-auto">
               <div className="flex gap-2">
