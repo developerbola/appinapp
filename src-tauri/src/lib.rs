@@ -165,6 +165,17 @@ pub fn run() {
             execute_command
         ])
         .setup(move |app| {
+
+             if let Some(window) = app.get_webview_window("control") {
+                let window_clone = window.clone();  // Clone for the closure
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = window_clone.hide();  // Use the clone
+                    }
+                });
+            }
+
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             #[cfg(target_os = "macos")]
@@ -175,9 +186,11 @@ pub fn run() {
                                 .effect(tauri::window::Effect::HudWindow)
                                 .state(tauri::window::EffectState::Active)
                                 .build()
-                        ).unwrap();
-                    }
+                    ).unwrap();
                 }
+            }
+
+
             let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = tauri::menu::MenuItem::with_id(
                 app,

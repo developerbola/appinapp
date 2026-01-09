@@ -5,7 +5,7 @@ import { Checkbox } from "./ui/checkbox";
 const LaunchLogin = () => {
   const [launch, setLaunch] = useState(false);
   return (
-    <Label className={`hover:cursor-pointer flex items-center gap-3 rounded-lg border p-2 px-3 ${launch && "border-[#155dfc60] bg-[#155dfc30]"}`}>
+    <Label className={`hover:cursor-pointer! flex items-center gap-3 rounded-lg border p-2 px-3 ${launch && "border-[#155dfc60] bg-[#155dfc30]"}`}>
       <Checkbox
         id="launch"
         defaultChecked

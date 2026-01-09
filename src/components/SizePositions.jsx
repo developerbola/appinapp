@@ -21,8 +21,8 @@ const SizePositions = () => {
     <div className="grid grid-cols-2 gap-2 w-[90%]">
       {[
         { label: "H", key: "h" },
-        { label: "W", key: "w" },
         { label: "X", key: "x" },
+        { label: "W", key: "w" },
         { label: "Y", key: "y" },
       ].map(({ label, key }) => (
         <div key={key} className="relative">
