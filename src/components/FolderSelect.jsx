@@ -43,7 +43,7 @@ export default function FolderSelect() {
         placeholder="Select folder..."
         readOnly
         onClick={selectFolder}
-        className="px-2 pt-1 h-7 cursor-pointer text-[13px] bg-[#ffffff20]!"
+        className="px-2 pt-1 h-7 cursor-pointer text-[13px] bg-[#ffffff10]!"
       />
       <button
         className="cursor-pointer h-7 w-8 rounded-sm flex items-center justify-center border border-border"
