@@ -1,13 +1,4 @@
-#!/bin/bash
-
-# Enable debugging - remove this line in production
-# set -x
-
-LOG_FILE="../src/widgets/Currency.widget/log.txt"
-LOG_DIR=$(dirname "$LOG_FILE")
-
-mkdir -p "$LOG_DIR"
-
+# Get today's date
 TODAY="$(date +%Y-%m-%d 2>/dev/null || date -v 0d +%Y-%m-%d 2>/dev/null)"
 
 if [ -z "$TODAY" ]; then
@@ -15,24 +6,7 @@ if [ -z "$TODAY" ]; then
     exit 1
 fi
 
-# Check if log file exists and is from today
-if [ -f "$LOG_FILE" ]; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        FILE_DATE=$(stat -f "%Sm" -t "%Y-%m-%d" "$LOG_FILE" 2>/dev/null)
-    else
-        FILE_DATE=$(date -r "$LOG_FILE" +%Y-%m-%d 2>/dev/null)
-    fi
-    
-    if [ "$FILE_DATE" = "$TODAY" ]; then
-        # Check if file has valid content
-        if [ -s "$LOG_FILE" ] && grep -q ":" "$LOG_FILE"; then
-            cat "$LOG_FILE"
-            exit 0
-        fi
-    fi
-fi
-
-# Generate array of dates
+# Build array of dates (today + 7 previous days)
 DATES=()
 DATES+=("$TODAY")
 for i in {1..7}; do
@@ -49,11 +23,12 @@ for i in {1..7}; do
     DATES+=("$PREV_DATE")
 done
 
+# Initialize arrays for storing results
 RATES=()
 DIFFS=()
 ACTUAL_DATES=()
 
-# Fetch currency data
+# Fetch data for each date
 for DATE in "${DATES[@]}"; do
     MAX_RETRIES=3
     RETRY_COUNT=0
@@ -61,7 +36,6 @@ for DATE in "${DATES[@]}"; do
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         URL="https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/$DATE/"
         
-        # Fetch with timeout
         RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 "$URL" 2>/dev/null)
         
         if [ -z "$RESPONSE" ]; then
@@ -77,11 +51,9 @@ for DATE in "${DATES[@]}"; do
             break
         fi
         
-        # Parse rate
         RATE=$(echo "$RESPONSE" | grep -o '"Rate":"[0-9.]*"' | sed 's/"Rate":"\(.*\)"/\1/')
         
         if [ -z "$RATE" ]; then
-            # Try going back one day if no rate found
             if [[ "$OSTYPE" == "darwin"* ]]; then
                 DATE=$(date -v-1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d 2>/dev/null)
             else
@@ -97,7 +69,6 @@ for DATE in "${DATES[@]}"; do
             continue
         fi
         
-        # Check if rate is duplicate (weekend/holiday)
         if [[ " ${RATES[@]} " =~ " $RATE " ]]; then
             if [[ "$OSTYPE" == "darwin"* ]]; then
                 DATE=$(date -v-1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d 2>/dev/null)
@@ -114,11 +85,9 @@ for DATE in "${DATES[@]}"; do
             continue
         fi
         
-        # Parse diff
         DIFF=$(echo "$RESPONSE" | grep -o '"Diff":"[-0-9.]*"' | sed 's/"Diff":"\(.*\)"/\1/')
         [ -z "$DIFF" ] && DIFF="0"
         
-        # Parse actual date from API
         API_DATE=$(echo "$RESPONSE" | grep -o '"Date":"[0-9-]*"' | sed 's/"Date":"\(.*\)"/\1/')
         [ -z "$API_DATE" ] && API_DATE="$DATE"
         
@@ -129,8 +98,8 @@ for DATE in "${DATES[@]}"; do
     done
 done
 
-# Build output string
-OUTPUT=""
+# Build output state (single variable containing all data)
+CURRENCY_DATA=""
 for i in {0..7}; do
     DATE=${ACTUAL_DATES[$i]:-""}
     RATE=${RATES[$i]:-"N/A"}
@@ -139,15 +108,12 @@ for i in {0..7}; do
     [ -z "$DATE" ] && DATE="unknown"
     
     TRIPLET="$DATE:$RATE:$DIFF"
-    if [ -z "$OUTPUT" ]; then
-        OUTPUT="$TRIPLET"
+    if [ -z "$CURRENCY_DATA" ]; then
+        CURRENCY_DATA="$TRIPLET"
     else
-        OUTPUT="$OUTPUT!!$TRIPLET"
+        CURRENCY_DATA="$CURRENCY_DATA!!$TRIPLET"
     fi
 done
 
-# Save to log file
-echo "$OUTPUT" > "$LOG_FILE"
-
-# Output result
-echo "$OUTPUT"
+# Output the result
+echo "$CURRENCY_DATA"

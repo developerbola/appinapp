@@ -7,7 +7,7 @@ export default function WeatherCard() {
         width: "100vw",
         height: "100vh",
         padding: "16px 20px",
-        borderRadius: 18,
+        borderRadius: 7,
         backgroundColor: "#8dc6ae50",
         color: "#fff",
       }}

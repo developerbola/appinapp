@@ -126,7 +126,7 @@ const ControlPanel = () => {
         id="titlebar"
         className="fixed inset-0 h-7 w-full z-9999 backdrop-blur-xl select-none!"
       />
-      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#000000b2] text-zinc-100 font-sans pt-7 hide-scrollbar">
+      <div className="relative flex flex-col h-screen overflow-y-auto overscroll-contain bg-[#0b0b0b] text-zinc-100 font-sans pt-7 hide-scrollbar">
         <div className="flex items-center justify-between px-6 py-3 border-b border-[#ffffff12]">
           <div className="flex items-center gap-3">
             <h1 className="text-xl">Control</h1>

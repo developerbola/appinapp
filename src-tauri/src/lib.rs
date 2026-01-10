@@ -198,18 +198,6 @@ pub fn run() {
 
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-            
-            #[cfg(target_os = "macos")]
-            {
-                if let Some(control) = app.get_webview_window("control") {
-                    let _ = control.set_effects(
-                        tauri::window::EffectsBuilder::new()
-                            .effect(tauri::window::Effect::HudWindow)
-                            .state(tauri::window::EffectState::Active)
-                            .build(),
-                    );
-                }
-            }
 
             let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = tauri::menu::MenuItem::with_id(

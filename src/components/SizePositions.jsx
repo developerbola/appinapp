@@ -36,11 +36,10 @@ const SizePositions = ({ w }) => {
         }
         
         
-        // Try innerSize/outerPosition first (standard API)
         let size, position;
         
-        if (typeof appWindow.innerSize === 'function') {
-          size = await appWindow.innerSize();
+        if (typeof appWindow.outerSize === 'function') {
+          size = await appWindow.outerSize();
           position = await appWindow.outerPosition();
         } else if (typeof appWindow.size === 'function') {
           size = await appWindow.size();

@@ -2,7 +2,6 @@ export const command = "../src/widgets/Currency.widget/rates.sh";
 export const refreshFrequency = 60 * 1000 * 60 * 24;
 
 const Currency = ({ output, error }) => {
-  // Styles
   const styles = {
     wrapper: {
       color: "white",
@@ -10,10 +9,10 @@ const Currency = ({ output, error }) => {
       userSelect: "none",
       cursor: "default",
       fontWeight: 300,
-      borderRadius: 16,
+      borderRadius: 7,
       width: "100vw",
       height: "100vh",
-      background: "#111",
+      background: "#11111190",
       backdropFilter: "blur(20px)",
       WebkitBackdropFilter: "blur(20px)",
       display: "flex",
@@ -137,7 +136,6 @@ const Currency = ({ output, error }) => {
     },
   };
 
-  // Loading/Error States
   if (
     !output ||
     !output.includes(":") ||
