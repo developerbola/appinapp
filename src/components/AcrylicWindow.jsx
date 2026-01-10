@@ -10,7 +10,6 @@ const AcrylicWindow = ({ w }) => {
 
   const applyEffect = async (appWindow) => {
     try {
-
       let effect = "hudWindow";
       await appWindow.setEffects({
         effects: [effect],
@@ -24,7 +23,8 @@ const AcrylicWindow = ({ w }) => {
 
   const clearEffect = async (appWindow) => {
     try {
-      await appWindow.setEffects(null);
+      // Try clearing with empty effects array first
+      await appWindow.clearEffects();
     } catch (error) {
       console.error("Error clearing effect:", error);
     }
@@ -87,7 +87,7 @@ const AcrylicWindow = ({ w }) => {
 
   return (
     <Label
-      className={`mt-1 border border-[#ffffff18] relative flex items-center justify-between rounded-md p-2 px-3 ${
+      className={`cursor-pointer mt-1 border border-[#ffffff18] relative flex items-center justify-between rounded-md p-2 px-3 ${
         enabled && "border-[#155dfc60] bg-[#155dfc30]"
       }`}
     >

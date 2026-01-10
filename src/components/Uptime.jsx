@@ -17,7 +17,7 @@ const Uptime = () => {
       <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
         Uptime
       </span>
-      <div className="flex items-end gap-2 font-mono text-3xl font-bold">
+      <div className="flex items-end gap-2 font-mono text-3xl font-bold -ml-2">
         <div>
           {hours > 0 && (
             <>

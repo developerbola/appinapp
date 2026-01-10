@@ -4,6 +4,7 @@ import { Activity, useState } from "react";
 import AcrylicWindow from "./AcrylicWindow";
 import AlwaysOn from "./AlwaysOn";
 import SizePositions from "./SizePositions";
+import AllWorkspaces from "./AllWorkspaces";
 
 const WindowSettings = ({ w }) => {
   const [open, setOpen] = useState(false);
@@ -40,6 +41,7 @@ const WindowSettings = ({ w }) => {
             <div className="mt-3 flex flex-col gap-2">
               <SizePositions w={w} />
               <AcrylicWindow w={w} />
+              <AllWorkspaces w={w} />
               <AlwaysOn w={w} />
             </div>
           </div>

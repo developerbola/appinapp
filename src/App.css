@@ -114,6 +114,10 @@ input[type="number"] {
   @apply bg-blue-600;
 }
 
+[data-slot="switch"][data-state="checked"][aria-describedby="allworkspaces-description"] {
+  @apply bg-emerald-600;
+}
+
 [data-slot="switch-thumb"][data-state="checked"] {
   @apply bg-white translate-x-[calc(100%-2px)];
 }
