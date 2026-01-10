@@ -124,41 +124,24 @@ fn get_app_stats(state: State<AppState>) -> serde_json::Value {
 }
 
 #[tauri::command]
-async fn execute_command(command: String) -> Result<String, String> {
-    use std::process::Command;
-
-    let output = if cfg!(target_os = "windows") {
-        Command::new("cmd").args(["/C", &command]).output()
-    } else {
-        Command::new("sh").args(["-c", &command]).output()
-    };
-
-    match output {
-        Ok(o) if o.status.success() => Ok(String::from_utf8_lossy(&o.stdout).to_string()),
-        Ok(o) => Err(String::from_utf8_lossy(&o.stderr).to_string()),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
-#[tauri::command]
 async fn set_launch_at_login(app: tauri::AppHandle, enable: bool) -> Result<(), String> {
     use tauri_plugin_autostart::ManagerExt;
-    
+
     let autostart_manager = app.autolaunch();
-    
+
     if enable {
         autostart_manager.enable().map_err(|e| e.to_string())?;
     } else {
         autostart_manager.disable().map_err(|e| e.to_string())?;
     }
-    
+
     Ok(())
 }
 
 #[tauri::command]
 async fn is_launch_at_login_enabled(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_autostart::ManagerExt;
-    
+
     let autostart_manager = app.autolaunch();
     autostart_manager.is_enabled().map_err(|e| e.to_string())
 }
@@ -172,6 +155,7 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_shell::init())
         .manage(AppState {
             widgets: Arc::new(Mutex::new(vec![])),
             sys: Arc::new(Mutex::new(System::new_all())),
@@ -181,7 +165,6 @@ pub fn run() {
             add_widget,
             remove_widget,
             get_app_stats,
-            execute_command,
             set_launch_at_login,
             is_launch_at_login_enabled
         ])

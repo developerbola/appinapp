@@ -99,10 +99,10 @@ const ControlPanel = () => {
 
       await invoke("add_widget", {
         wType: type,
-        x: module?.windowLeft ?? 100,
-        y: module?.windowTop ?? 100,
-        width: module?.windowWidth ?? 300,
-        height: module?.windowHeight ?? 200,
+        x: module?.windowLeft / 2,
+        y: module?.windowTop / 2,
+        width: module?.windowWidth / 2,
+        height: module?.windowHeight / 2,
       });
       await fetchWidgets();
     } catch (err) {
@@ -118,6 +118,8 @@ const ControlPanel = () => {
       console.error("Failed to remove widget:", err);
     }
   };
+
+  const edit = (id) => {};
 
   return (
     <>
@@ -246,6 +248,12 @@ const ControlPanel = () => {
                                 label: "Delete",
                                 icon: <Trash className="w-4 h-4" />,
                                 onClick: () => removeWidget(type),
+                                danger: true,
+                              },
+                              {
+                                label: "Edit",
+                                icon: <Trash className="w-4 h-4" />,
+                                onClick: () => edit(type),
                                 danger: true,
                               },
                             ].map((item) => (

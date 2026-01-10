@@ -52,7 +52,7 @@ const Clock = () => {
 
 export const windowTop = 50;
 export const windowLeft = 50;
-export const windowHeight = 170;
-export const windowWidth = 280;
+export const windowHeight = 340;
+export const windowWidth = 560;
 
 export default Clock;
