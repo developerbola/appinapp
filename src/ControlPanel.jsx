@@ -38,22 +38,20 @@ const ControlPanel = () => {
   });
   const [active, setActive] = useState("control");
 
-  const widgetTypes = useMemo(() => {
-    return Object.keys(widgetModules).reduce((acc, path) => {
-      const name = path.split("/")[2].replace(".widget", "");
+  const widgetTypes = Object.keys(widgetModules).reduce((acc, path) => {
+    const name = path.split("/")[2].replace(".widget", "");
 
-      const labels = {
-        Clock: {
-          label: "Clock",
-        },
-      };
+    const labels = {
+      Clock: {
+        label: "Clock",
+      },
+    };
 
-      acc[name] = labels[name] || {
-        label: name.replace(/([A-Z])/g, " $1").trim(),
-      };
-      return acc;
-    }, {});
-  }, []);
+    acc[name] = labels[name] || {
+      label: name.replace(/([A-Z])/g, " $1").trim(),
+    };
+    return acc;
+  }, {});
 
   const fetchWidgets = async () => {
     setIsRefreshing(true);

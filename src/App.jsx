@@ -102,13 +102,11 @@ function App() {
     eager: true,
   });
 
-  const widgetsData = useMemo(() => {
-    return Object.keys(widgetModules).reduce((acc, path) => {
+  const widgetsData = Object.keys(widgetModules).reduce((acc, path) => {
       const name = path.split("/")[2].replace(".widget", "");
       acc[name] = widgetModules[path];
       return acc;
     }, {});
-  }, []);
 
   useEffect(() => {
     const win = getCurrentWindow();
