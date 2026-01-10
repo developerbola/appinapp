@@ -4,7 +4,6 @@ import React, {
   useEffect,
   useCallback,
   Component as ReactComponent,
-  useMemo,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -96,17 +95,20 @@ function App() {
   const [isControlWindow, setIsControlWindow] = useState(false);
   const [widgetId, setWidgetId] = useState(null);
   const [widgets, setWidgets] = useState([]);
-  const [widgetFolder, setWidgetFolder] = useAtom(widgetFolderAtom);
+  const [widgetFolder] = useAtom(widgetFolderAtom);
 
+  // Load widgets from both built-in and custom folder
   const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
     eager: true,
   });
 
-  const widgetsData = Object.keys(widgetModules).reduce((acc, path) => {
+  const widgetsData = React.useMemo(() => {
+    return Object.keys(widgetModules).reduce((acc, path) => {
       const name = path.split("/")[2].replace(".widget", "");
       acc[name] = widgetModules[path];
       return acc;
     }, {});
+  }, []);
 
   useEffect(() => {
     const win = getCurrentWindow();
@@ -120,10 +122,22 @@ function App() {
 
     if (label.startsWith("widget-")) {
       setWidgetId(label.replace("widget-", ""));
-      invoke("get_widgets").then(setWidgets);
-      listen("widgets-update", (e) => setWidgets(e.payload));
+      // Pass folder path to backend
+      invoke("get_widgets", { folderPath: widgetFolder })
+        .then(setWidgets)
+        .catch((err) => {
+          console.error("Failed to get widgets:", err);
+          // Fallback to getting widgets without folder path
+          invoke("get_widgets").then(setWidgets);
+        });
+
+      const unlisten = listen("widgets-update", (e) => setWidgets(e.payload));
+
+      return () => {
+        unlisten.then((fn) => fn());
+      };
     }
-  }, []);
+  }, [widgetFolder]);
 
   if (isControlWindow) return <ControlPanel />;
 
@@ -133,7 +147,28 @@ function App() {
   if (!widget) return null;
 
   const module = widgetsData[widget.w_type];
-  if (!module) return null;
+  if (!module) {
+    return (
+      <div
+        style={{
+          color: "orange",
+          padding: 12,
+          background: "#00000040",
+          width: "100vw",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+        }}
+      >
+        <p>Widget type not found: {widget.w_type}</p>
+        <p style={{ fontSize: "12px", marginTop: "8px", opacity: 0.7 }}>
+          Make sure the widget exists in: {widgetFolder}
+        </p>
+      </div>
+    );
+  }
 
   return <WidgetHandler widgetInfo={widget} module={module} />;
 }

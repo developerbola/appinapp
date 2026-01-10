@@ -18,17 +18,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAtom } from "jotai";
+import { widgetFolderAtom } from "@/atoms/atoms";
 import WindowSettings from "./components/WindowSettings";
 import Uptime from "./components/Uptime";
 import Settings from "./sections/Settings";
 import Gallery from "./sections/Gallery";
 
-const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
-  eager: true,
-});
-
 const ControlPanel = () => {
   const [widgets, setWidgets] = useState([]);
+  const [widgetFolder] = useAtom(widgetFolderAtom);
+  const [availableWidgetTypes, setAvailableWidgetTypes] = useState([]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -38,34 +38,50 @@ const ControlPanel = () => {
   });
   const [active, setActive] = useState("control");
 
-  const widgetTypes = Object.keys(widgetModules).reduce((acc, path) => {
-    const name = path.split("/")[2].replace(".widget", "");
+  // Build widget types from scanned folder
+  const widgetTypes = useMemo(() => {
+    return availableWidgetTypes.reduce((acc, type) => {
+      acc[type] = {
+        label: type.replace(/([A-Z])/g, " $1").trim(),
+      };
+      return acc;
+    }, {});
+  }, [availableWidgetTypes]);
 
-    const labels = {
-      Clock: {
-        label: "Clock",
-      },
-    };
-
-    acc[name] = labels[name] || {
-      label: name.replace(/([A-Z])/g, " $1").trim(),
-    };
-    return acc;
-  }, {});
+  // Scan widget folder for available widgets
+  const scanWidgetFolder = async () => {
+    try {
+      const types = await invoke("scan_widget_folder", {
+        folderPath: widgetFolder,
+      });
+      setAvailableWidgetTypes(types);
+    } catch (err) {
+      console.error("Failed to scan widget folder:", err);
+      setAvailableWidgetTypes([]);
+    }
+  };
 
   const fetchWidgets = async () => {
     setIsRefreshing(true);
     try {
-      const list = await invoke("get_widgets");
+      const list = await invoke("get_widgets", { folderPath: widgetFolder });
       setWidgets(list);
     } catch (err) {
       console.error("Failed to fetch widgets:", err);
+      // Fallback without folder path
+      try {
+        const list = await invoke("get_widgets");
+        setWidgets(list);
+      } catch (fallbackErr) {
+        console.error("Fallback also failed:", fallbackErr);
+      }
     } finally {
       setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
   useEffect(() => {
+    scanWidgetFolder();
     fetchWidgets();
 
     const unlisten = listen("widgets-update", (event) => {
@@ -86,21 +102,17 @@ const ControlPanel = () => {
       unlisten.then((f) => f());
       clearInterval(statsTimer);
     };
-  }, []);
+  }, [widgetFolder]);
 
   const addWidget = async (type) => {
     try {
-      const modulePath = Object.keys(widgetModules).find((path) =>
-        path.includes(`${type}.widget/index.jsx`)
-      );
-      const module = modulePath ? widgetModules[modulePath] : null;
-
       await invoke("add_widget", {
         wType: type,
-        x: module?.windowLeft / 2,
-        y: module?.windowTop / 2,
-        width: module?.windowWidth / 2,
-        height: module?.windowHeight / 2,
+        folderPath: widgetFolder,
+        x: 100,
+        y: 100,
+        width: 300,
+        height: 200,
       });
       await fetchWidgets();
     } catch (err) {
@@ -166,7 +178,10 @@ const ControlPanel = () => {
                   ? "bg-[#00c95030] border-[#00c95060] text-green-400"
                   : "text-[#ffffff90]"
               }`}
-              onClick={fetchWidgets}
+              onClick={() => {
+                scanWidgetFolder();
+                fetchWidgets();
+              }}
             >
               <RefreshCw
                 className={`size-4 ${
@@ -213,63 +228,74 @@ const ControlPanel = () => {
                   </h2>
                   <Separator className="flex-1 bg-white/5" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                  {Object.entries(widgetTypes).map(([type, meta]) => (
-                    <div
-                      key={type}
-                      className="bg-[#ffffff10] border border-[#ffffff05] border-l-2 border-l-[#ffffff40]"
-                    >
-                      <div className="pl-4 pr-2 py-1 flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-sm tracking-tight">
-                            {meta.label}
-                          </h3>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className={"opacity-60"}
-                            >
-                              <EllipsisVertical className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {[
-                              {
-                                label: "Add",
-                                icon: <CirclePlus className="w-4 h-4" />,
-                                onClick: () => addWidget(type),
-                              },
-                              {
-                                label: "Delete",
-                                icon: <Trash className="w-4 h-4" />,
-                                onClick: () => removeWidget(type),
-                                danger: true,
-                              },
-                              {
-                                label: "Edit",
-                                icon: <Trash className="w-4 h-4" />,
-                                onClick: () => edit(type),
-                                danger: true,
-                              },
-                            ].map((item) => (
-                              <DropdownMenuItem
-                                key={item.label}
-                                onClick={item.onClick}
-                                className="flex items-center justify-between gap-3 menuItem"
+                {availableWidgetTypes.length === 0 ? (
+                  <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/1">
+                    <p className="text-xs text-zinc-600 font-medium">
+                      NO WIDGETS FOUND
+                    </p>
+                    <p className="text-[12px] text-zinc-700 mt-1 tracking-tighter">
+                      Check widget folder: {widgetFolder}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                    {Object.entries(widgetTypes).map(([type, meta]) => (
+                      <div
+                        key={type}
+                        className="bg-[#ffffff10] border border-[#ffffff05] border-l-2 border-l-[#ffffff40]"
+                      >
+                        <div className="pl-4 pr-2 py-1 flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-sm tracking-tight">
+                              {meta.label}
+                            </h3>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className={"opacity-60"}
                               >
-                                <span>{item.label}</span>
-                                {item.icon}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                <EllipsisVertical className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {[
+                                {
+                                  label: "Add",
+                                  icon: <CirclePlus className="w-4 h-4" />,
+                                  onClick: () => addWidget(type),
+                                },
+                                {
+                                  label: "Delete",
+                                  icon: <Trash className="w-4 h-4" />,
+                                  onClick: () => removeWidget(type),
+                                  danger: true,
+                                },
+                                {
+                                  label: "Edit",
+                                  icon: <Trash className="w-4 h-4" />,
+                                  onClick: () => edit(type),
+                                  danger: true,
+                                },
+                              ].map((item) => (
+                                <DropdownMenuItem
+                                  key={item.label}
+                                  onClick={item.onClick}
+                                  className="flex items-center justify-between gap-3 menuItem"
+                                >
+                                  <span>{item.label}</span>
+                                  {item.icon}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

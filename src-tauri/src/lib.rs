@@ -146,6 +146,53 @@ async fn is_launch_at_login_enabled(app: tauri::AppHandle) -> Result<bool, Strin
     autostart_manager.is_enabled().map_err(|e| e.to_string())
 }
 
+use std::fs;
+use std::path::Path;
+
+#[tauri::command]
+fn scan_widget_folder(folder_path: String) -> Result<Vec<String>, String> {
+    let path = Path::new(&folder_path);
+
+    if !path.exists() {
+        return Err(format!("Folder does not exist: {}", folder_path));
+    }
+
+    if !path.is_dir() {
+        return Err(format!("Path is not a directory: {}", folder_path));
+    }
+
+    let mut widget_types = Vec::new();
+
+    match fs::read_dir(path) {
+        Ok(entries) => {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let entry_path = entry.path();
+
+                    if entry_path.is_dir() {
+                        if let Some(dir_name) = entry_path.file_name() {
+                            if let Some(name_str) = dir_name.to_str() {
+                                if name_str.ends_with(".widget") {
+                                    let index_path = entry_path.join("index.jsx");
+                                    if index_path.exists() {
+                                        let widget_type = name_str.replace(".widget", "");
+                                        widget_types.push(widget_type);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            return Err(format!("Failed to read directory: {}", e));
+        }
+    }
+
+    Ok(widget_types)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -166,7 +213,8 @@ pub fn run() {
             remove_widget,
             get_app_stats,
             set_launch_at_login,
-            is_launch_at_login_enabled
+            is_launch_at_login_enabled,
+            scan_widget_folder
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("control") {
