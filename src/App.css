@@ -126,5 +126,5 @@ input[type="number"] {
 }
 
 button:disabled {
-  @apply bg-border! cursor-not-allowed! opacity-60;
+  @apply bg-border! opacity-60;
 }

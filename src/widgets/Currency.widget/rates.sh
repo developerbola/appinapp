@@ -3,7 +3,7 @@
 # Enable debugging - remove this line in production
 # set -x
 
-LOG_FILE="./log.txt"
+LOG_FILE="../src/widgets/Currency.widget/log.txt"
 LOG_DIR=$(dirname "$LOG_FILE")
 
 mkdir -p "$LOG_DIR"
