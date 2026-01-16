@@ -146,6 +146,32 @@ async fn is_launch_at_login_enabled(app: tauri::AppHandle) -> Result<bool, Strin
     autostart_manager.is_enabled().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn read_widget_file(path: String) -> Result<String, String> {
+    fs::read_to_string(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn execute_command(command: String) -> Result<String, String> {
+    use std::process::Command;
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd").args(&["/C", &command]).output()
+    } else {
+        Command::new("sh").args(&["-c", &command]).output()
+    };
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(String::from_utf8_lossy(&output.stdout).to_string())
+            } else {
+                Err(String::from_utf8_lossy(&output.stderr).to_string())
+            }
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 use std::fs;
 use std::path::Path;
 
@@ -221,7 +247,9 @@ pub fn run() {
             get_app_stats,
             set_launch_at_login,
             is_launch_at_login_enabled,
-            scan_widget_folder
+            scan_widget_folder,
+            read_widget_file,
+            execute_command
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("control") {

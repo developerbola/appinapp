@@ -178,19 +178,35 @@ function App() {
 
         for (const ext of possibleExtensions) {
           const path = `${normalizedFolder}${type}.widget/index.${ext}`;
-          // In production, we must use convertFileSrc to get a valid URL for the asset protocol
-          // @fs is a Vite-specific dev server feature
-          const importUrl = import.meta.env.DEV
-            ? `/@fs${path}`
-            : convertFileSrc(path);
+          let importUrl = null;
 
           try {
+            if (import.meta.env.DEV) {
+              importUrl = `/@fs${path}`;
+            } else {
+              // In production, we read the file content via backend
+              // and create a Blob URL to avoid protocol issues with dynamic import() on WebKit
+              const content = await invoke("read_widget_file", { path });
+              const blob = new Blob([content], {
+                type: "application/javascript",
+              });
+              importUrl = URL.createObjectURL(blob);
+            }
+
             const module = await import(/* @vite-ignore */ importUrl);
             if (module) {
               loadedModule = module;
+              if (!import.meta.env.DEV && importUrl) {
+                // We keep the URL for a bit to ensure it's loaded,
+                // but technically import() is done here.
+                setTimeout(() => URL.revokeObjectURL(importUrl), 100);
+              }
               break;
             }
           } catch (e) {
+            if (!import.meta.env.DEV && importUrl) {
+              URL.revokeObjectURL(importUrl);
+            }
             lastError = e;
           }
         }
