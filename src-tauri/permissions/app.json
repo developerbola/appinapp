@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/permission-schema.json",
+  "identifier": "allow-app-commands",
+  "description": "Allows custom commands defined in the main crate",
+  "commands": {
+    "allow": [
+      "get_widgets",
+      "add_widget",
+      "remove_widget",
+      "get_app_stats",
+      "scan_widget_folder",
+      "set_launch_at_login",
+      "is_launch_at_login_enabled"
+    ]
+  }
+}

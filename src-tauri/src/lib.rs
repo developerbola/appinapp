@@ -173,8 +173,14 @@ fn scan_widget_folder(folder_path: String) -> Result<Vec<String>, String> {
                         if let Some(dir_name) = entry_path.file_name() {
                             if let Some(name_str) = dir_name.to_str() {
                                 if name_str.ends_with(".widget") {
-                                    let index_path = entry_path.join("index.jsx");
-                                    if index_path.exists() {
+                                    let mut found = false;
+                                    for ext in &["js", "jsx"] {
+                                        if entry_path.join(format!("index.{}", ext)).exists() {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if found {
                                         let widget_type = name_str.replace(".widget", "");
                                         widget_types.push(widget_type);
                                     }
@@ -203,6 +209,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(AppState {
             widgets: Arc::new(Mutex::new(vec![])),
             sys: Arc::new(Mutex::new(System::new_all())),

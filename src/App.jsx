@@ -1,11 +1,16 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  getCurrentWindow,
+  LogicalPosition,
+  LogicalSize,
+} from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import React, {
   useState,
   useEffect,
   useCallback,
   Component as ReactComponent,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import ControlPanel from "./ControlPanel";
@@ -83,6 +88,27 @@ const WidgetHandler = ({ widgetInfo, module }) => {
     }
   }, [command, refreshFrequency]);
 
+  useEffect(() => {
+    const applyWindowPrefs = async () => {
+      try {
+        const win = getCurrentWebviewWindow();
+        const { windowWidth, windowHeight, windowTop, windowLeft } = module;
+
+        if (windowWidth && windowHeight) {
+          await win.setSize(new LogicalSize(windowWidth, windowHeight));
+        }
+
+        if (windowTop !== undefined && windowLeft !== undefined) {
+          await win.setPosition(new LogicalPosition(windowLeft, windowTop));
+        }
+      } catch (err) {
+        console.error("Failed to apply window preferences:", err);
+      }
+    };
+
+    applyWindowPrefs();
+  }, [module]);
+
   return (
     <ErrorBoundary name={widgetInfo.w_type}>
       {module.className && <style>{module.className}</style>}
@@ -96,19 +122,8 @@ function App() {
   const [widgetId, setWidgetId] = useState(null);
   const [widgets, setWidgets] = useState([]);
   const [widgetFolder] = useAtom(widgetFolderAtom);
-
-  // Load widgets from both built-in and custom folder
-  const widgetModules = import.meta.glob("./widgets/*.widget/index.jsx", {
-    eager: true,
-  });
-
-  const widgetsData = React.useMemo(() => {
-    return Object.keys(widgetModules).reduce((acc, path) => {
-      const name = path.split("/")[2].replace(".widget", "");
-      acc[name] = widgetModules[path];
-      return acc;
-    }, {});
-  }, []);
+  const [externalModules, setExternalModules] = useState({});
+  const [isLoadingExternal, setIsLoadingExternal] = useState(false);
 
   useEffect(() => {
     const win = getCurrentWindow();
@@ -121,7 +136,9 @@ function App() {
     }
 
     if (label.startsWith("widget-")) {
-      setWidgetId(label.replace("widget-", ""));
+      const id = label.replace("widget-", "");
+      setWidgetId(id);
+
       // Pass folder path to backend
       invoke("get_widgets", { folderPath: widgetFolder })
         .then(setWidgets)
@@ -139,6 +156,65 @@ function App() {
     }
   }, [widgetFolder]);
 
+  useEffect(() => {
+    if (!widgetId || !widgets.length || !widgetFolder) return;
+
+    const widget = widgets.find((w) => w.id === widgetId);
+    if (!widget) return;
+
+    const type = widget.w_type;
+    if (externalModules[type]) return;
+
+    const loadExternal = async () => {
+      setIsLoadingExternal(true);
+      try {
+        const normalizedFolder = widgetFolder.endsWith("/")
+          ? widgetFolder
+          : `${widgetFolder}/`;
+
+        const possibleExtensions = ["js", "jsx"];
+        let loadedModule = null;
+        let lastError = null;
+
+        for (const ext of possibleExtensions) {
+          const path = `${normalizedFolder}${type}.widget/index.${ext}`;
+          // In production, we must use convertFileSrc to get a valid URL for the asset protocol
+          // @fs is a Vite-specific dev server feature
+          const importUrl = import.meta.env.DEV
+            ? `/@fs${path}`
+            : convertFileSrc(path);
+
+          try {
+            const module = await import(/* @vite-ignore */ importUrl);
+            if (module) {
+              loadedModule = module;
+              break;
+            }
+          } catch (e) {
+            lastError = e;
+          }
+        }
+
+        if (loadedModule) {
+          setExternalModules((prev) => ({ ...prev, [type]: loadedModule }));
+        } else {
+          throw (
+            lastError ||
+            new Error(
+              `Could not find index.js or index.jsx for widget type ${type}`
+            )
+          );
+        }
+      } catch (err) {
+        console.error(`Failed to load external widget type ${type}:`, err);
+      } finally {
+        setIsLoadingExternal(false);
+      }
+    };
+
+    loadExternal();
+  }, [widgetId, widgets, widgetFolder, externalModules]);
+
   if (isControlWindow) return <ControlPanel />;
 
   if (!widgetId) return null;
@@ -146,8 +222,17 @@ function App() {
   const widget = widgets.find((w) => w.id === widgetId);
   if (!widget) return null;
 
-  const module = widgetsData[widget.w_type];
+  const module = externalModules[widget.w_type];
+
   if (!module) {
+    if (isLoadingExternal) {
+      return (
+        <div style={{ color: "white", padding: 12, background: "#00000040" }}>
+          Loading widget...
+        </div>
+      );
+    }
+
     return (
       <div
         style={{

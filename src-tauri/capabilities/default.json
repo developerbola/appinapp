@@ -22,6 +22,10 @@
     "core:window:allow-set-visible-on-all-workspaces",
     "shell:allow-execute",
     "shell:allow-open",
+    "autostart:default",
+    "fs:default",
+    "fs:allow-document-read-recursive",
+    "fs:allow-home-read-recursive",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "**" }]

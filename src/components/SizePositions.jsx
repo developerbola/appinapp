@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  PhysicalPosition,
-  PhysicalSize,
-} from "@tauri-apps/api/window";
+import { LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { Input } from "./ui/input";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
@@ -29,32 +26,42 @@ const SizePositions = ({ w }) => {
     const loadWindowData = async () => {
       try {
         const appWindow = await WebviewWindow.getByLabel(window_name);
-        
+
         if (!appWindow) {
           console.error("Window not found:", window_name);
           return;
         }
-        
-        
+
+        const scaleFactor = (await appWindow.scaleFactor()) || 1;
         let size, position;
-        
-        if (typeof appWindow.outerSize === 'function') {
-          size = await appWindow.outerSize();
-          position = await appWindow.outerPosition();
-        } else if (typeof appWindow.size === 'function') {
-          size = await appWindow.size();
-          position = await appWindow.position();
+
+        if (typeof appWindow.innerSize === "function") {
+          size = await appWindow.innerSize();
+          position = await appWindow.innerPosition();
         } else {
           console.error("No size/position methods available");
           return;
         }
 
+        // Safer conversion handling
+        const lH = size.toLogical
+          ? size.toLogical(scaleFactor).height
+          : size.height / scaleFactor;
+        const lW = size.toLogical
+          ? size.toLogical(scaleFactor).width
+          : size.width / scaleFactor;
+        const lX = position.toLogical
+          ? position.toLogical(scaleFactor).x
+          : position.x / scaleFactor;
+        const lY = position.toLogical
+          ? position.toLogical(scaleFactor).y
+          : position.y / scaleFactor;
 
         setPositions({
-          h: Math.round(size.height).toString(),
-          w: Math.round(size.width).toString(),
-          x: Math.round(position.x).toString(),
-          y: Math.round(position.y).toString(),
+          h: Math.round(lH).toString(),
+          w: Math.round(lW).toString(),
+          x: Math.round(lX).toString(),
+          y: Math.round(lY).toString(),
         });
       } catch (error) {
         console.error("Error loading window size/position:", error);
@@ -77,7 +84,7 @@ const SizePositions = ({ w }) => {
     timeoutRef.current = setTimeout(async () => {
       try {
         const appWindow = await WebviewWindow.getByLabel(window_name);
-        
+
         if (!appWindow) {
           console.error("Window not found:", window_name);
           return;
@@ -89,15 +96,14 @@ const SizePositions = ({ w }) => {
           const height = parseInt(h);
           const widthNum = parseInt(width);
           if (height > 0 && widthNum > 0) {
-            await appWindow.setSize(new PhysicalSize(widthNum, height));
+            await appWindow.setSize(new LogicalSize(widthNum, height));
           }
         }
-
         if (x !== "" && y !== "") {
           const xPos = parseInt(x);
           const yPos = parseInt(y);
           if (!isNaN(xPos) && !isNaN(yPos)) {
-            await appWindow.setPosition(new PhysicalPosition(xPos, yPos));
+            await appWindow.setPosition(new LogicalPosition(xPos, yPos));
           }
         }
       } catch (error) {

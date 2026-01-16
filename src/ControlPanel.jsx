@@ -11,6 +11,7 @@ import {
   CircleMinus,
   Settings as SettingsIcon,
   LayoutDashboard,
+  Code,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -275,7 +276,7 @@ const ControlPanel = () => {
                                 },
                                 {
                                   label: "Edit",
-                                  icon: <Trash className="w-4 h-4" />,
+                                  icon: <Code className="w-4 h-4" />,
                                   onClick: () => edit(type),
                                   danger: true,
                                 },
