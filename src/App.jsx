@@ -54,7 +54,7 @@ class ErrorBoundary extends ReactComponent {
   }
 }
 
-const WidgetHandler = ({ widgetInfo, module }) => {
+const WidgetHandler = ({ widgetInfo, module, widgetFolder }) => {
   if (!module) return null;
 
   const Component = module.default;
@@ -64,16 +64,36 @@ const WidgetHandler = ({ widgetInfo, module }) => {
   const [output, setOutput] = useState("");
   const [error, setError] = useState(null);
 
-  const run = useCallback(async (cmd) => {
-    return invoke("execute_command", { command: cmd });
-  }, []);
+  const resolveCommand = useCallback(
+    (cmd) => {
+      if (cmd && cmd.startsWith("./")) {
+        const normalizedFolder = widgetFolder.endsWith("/")
+          ? widgetFolder
+          : `${widgetFolder}/`;
+        return `${normalizedFolder}${widgetInfo.w_type}.widget/${cmd.substring(
+          2
+        )}`;
+      }
+      return cmd;
+    },
+    [widgetFolder, widgetInfo.w_type]
+  );
+
+  const run = useCallback(
+    async (cmd) => {
+      const resolved = resolveCommand(cmd);
+      return invoke("execute_command", { command: resolved });
+    },
+    [resolveCommand]
+  );
 
   useEffect(() => {
     if (!command) return;
 
     const exec = async () => {
       try {
-        const result = await invoke("execute_command", { command });
+        const resolved = resolveCommand(command);
+        const result = await invoke("execute_command", { command: resolved });
         setOutput(result);
         setError(null);
       } catch (e) {
@@ -87,7 +107,7 @@ const WidgetHandler = ({ widgetInfo, module }) => {
       const id = setInterval(exec, refreshFrequency);
       return () => clearInterval(id);
     }
-  }, [command, refreshFrequency]);
+  }, [command, refreshFrequency, resolveCommand]);
 
   useEffect(() => {
     const applyWindowPrefs = async () => {
@@ -282,7 +302,13 @@ function App() {
     );
   }
 
-  return <WidgetHandler widgetInfo={widget} module={module} />;
+  return (
+    <WidgetHandler
+      widgetInfo={widget}
+      module={module}
+      widgetFolder={widgetFolder}
+    />
+  );
 }
 
 export default App;
