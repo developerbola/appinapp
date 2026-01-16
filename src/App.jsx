@@ -10,8 +10,9 @@ import React, {
   useCallback,
   Component as ReactComponent,
 } from "react";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { transform } from "sucrase";
 import "./App.css";
 import ControlPanel from "./ControlPanel";
 import { widgetFolderAtom } from "./atoms/atoms";
@@ -178,35 +179,45 @@ function App() {
 
         for (const ext of possibleExtensions) {
           const path = `${normalizedFolder}${type}.widget/index.${ext}`;
-          let importUrl = null;
 
           try {
             if (import.meta.env.DEV) {
-              importUrl = `/@fs${path}`;
-            } else {
-              // In production, we read the file content via backend
-              // and create a Blob URL to avoid protocol issues with dynamic import() on WebKit
-              const content = await invoke("read_widget_file", { path });
-              const blob = new Blob([content], {
-                type: "application/javascript",
-              });
-              importUrl = URL.createObjectURL(blob);
-            }
-
-            const module = await import(/* @vite-ignore */ importUrl);
-            if (module) {
-              loadedModule = module;
-              if (!import.meta.env.DEV && importUrl) {
-                // We keep the URL for a bit to ensure it's loaded,
-                // but technically import() is done here.
-                setTimeout(() => URL.revokeObjectURL(importUrl), 100);
+              const importUrl = `/@fs${path}`;
+              const module = await import(/* @vite-ignore */ importUrl);
+              if (module) {
+                loadedModule = module;
+                break;
               }
-              break;
+            } else {
+              // In production, we read the file and transpile it
+              const content = await invoke("read_widget_file", { path });
+
+              // Transpile JSX to JS
+              const compiled = transform(content, {
+                transforms: ["jsx", "imports"],
+                jsxRuntime: "classic",
+              }).code;
+
+              // Setup a common-js like environment
+              const exports = {};
+              const require = (name) => {
+                if (name === "react") return window.React;
+                if (name === "lucide-react") return window.Lucide;
+                throw new Error(
+                  `Module ${name} not found in widget environment`
+                );
+              };
+
+              // Execute the code
+              const fn = new Function("require", "exports", "React", compiled);
+              fn(require, exports, window.React);
+
+              if (exports.default || Object.keys(exports).length > 0) {
+                loadedModule = exports;
+                break;
+              }
             }
           } catch (e) {
-            if (!import.meta.env.DEV && importUrl) {
-              URL.revokeObjectURL(importUrl);
-            }
             lastError = e;
           }
         }
@@ -217,7 +228,7 @@ function App() {
           throw (
             lastError ||
             new Error(
-              `Could not find index.js or index.jsx for widget type ${type}`
+              `Could not find or load index.js/jsx for widget type ${type}`
             )
           );
         }

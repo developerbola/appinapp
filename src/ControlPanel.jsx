@@ -130,7 +130,20 @@ const ControlPanel = () => {
     }
   };
 
-  const edit = (id) => {};
+  const edit = async (type) => {
+    try {
+      // Normalize folder path and construct widget path
+      const base = widgetFolder.replace(/\/$/, "");
+      const path = `${base}/${type}.widget`;
+
+      // Try to open index.js or index.jsx, fallback to the folder
+      await invoke("execute_command", {
+        command: `if [ -f "${path}/index.js" ]; then open "${path}/index.js"; elif [ -f "${path}/index.jsx" ]; then open "${path}/index.jsx"; else open "${path}"; fi`,
+      });
+    } catch (err) {
+      console.error("Failed to open widget for editing:", err);
+    }
+  };
 
   return (
     <>
