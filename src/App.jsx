@@ -55,36 +55,30 @@ class ErrorBoundary extends ReactComponent {
 }
 
 const WidgetHandler = ({ widgetInfo, module, widgetFolder }) => {
+  const [output, setOutput] = useState("");
+  const [error, setError] = useState(null);
+
   if (!module) return null;
 
   const Component = module.default;
   const command = module.command;
   const refreshFrequency = module.refreshFrequency;
 
-  const [output, setOutput] = useState("");
-  const [error, setError] = useState(null);
-
-  const resolveCommand = useCallback(
-    (cmd) => {
-      if (cmd && cmd.startsWith("./")) {
-        const normalizedFolder = widgetFolder.endsWith("/")
-          ? widgetFolder
-          : `${widgetFolder}/`;
-        return `${normalizedFolder}${widgetInfo.w_type}.widget/${cmd.substring(
-          2
-        )}`;
-      }
-      return cmd;
-    },
-    [widgetFolder, widgetInfo.w_type]
-  );
+  const widgetPath = React.useMemo(() => {
+    const normalizedFolder = widgetFolder.endsWith("/")
+      ? widgetFolder
+      : `${widgetFolder}/`;
+    return `${normalizedFolder}${widgetInfo.w_type}.widget`;
+  }, [widgetFolder, widgetInfo.w_type]);
 
   const run = useCallback(
     async (cmd) => {
-      const resolved = resolveCommand(cmd);
-      return invoke("execute_command", { command: resolved });
+      return invoke("execute_command", {
+        command: cmd,
+        workDir: widgetPath,
+      });
     },
-    [resolveCommand]
+    [widgetPath],
   );
 
   useEffect(() => {
@@ -92,8 +86,10 @@ const WidgetHandler = ({ widgetInfo, module, widgetFolder }) => {
 
     const exec = async () => {
       try {
-        const resolved = resolveCommand(command);
-        const result = await invoke("execute_command", { command: resolved });
+        const result = await invoke("execute_command", {
+          command: command,
+          workDir: widgetPath,
+        });
         setOutput(result);
         setError(null);
       } catch (e) {
@@ -107,7 +103,7 @@ const WidgetHandler = ({ widgetInfo, module, widgetFolder }) => {
       const id = setInterval(exec, refreshFrequency);
       return () => clearInterval(id);
     }
-  }, [command, refreshFrequency, resolveCommand]);
+  }, [command, refreshFrequency, widgetPath]);
 
   useEffect(() => {
     const applyWindowPrefs = async () => {
@@ -224,7 +220,7 @@ function App() {
                 if (name === "react") return window.React;
                 if (name === "lucide-react") return window.Lucide;
                 throw new Error(
-                  `Module ${name} not found in widget environment`
+                  `Module ${name} not found in widget environment`,
                 );
               };
 
@@ -248,7 +244,7 @@ function App() {
           throw (
             lastError ||
             new Error(
-              `Could not find or load index.js/jsx for widget type ${type}`
+              `Could not find or load index.js/jsx for widget type ${type}`,
             )
           );
         }

@@ -160,6 +160,7 @@ const ControlPanel = () => {
 
       await invoke("execute_command", {
         command: `if [ -f "${path}/index.js" ]; then open "${path}/index.js"; elif [ -f "${path}/index.jsx" ]; then open "${path}/index.jsx"; else open "${path}"; fi`,
+        workDir: null,
       });
     } catch (err) {
       console.error("Failed to open widget for editing:", err);

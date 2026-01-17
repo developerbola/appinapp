@@ -154,13 +154,23 @@ fn read_widget_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn execute_command(command: String) -> Result<String, String> {
+fn execute_command(command: String, work_dir: Option<String>) -> Result<String, String> {
     use std::process::Command;
-    let output = if cfg!(target_os = "windows") {
-        Command::new("cmd").args(&["/C", &command]).output()
+    let mut cmd = if cfg!(target_os = "windows") {
+        let mut c = Command::new("cmd");
+        c.args(&["/C", &command]);
+        c
     } else {
-        Command::new("sh").args(&["-c", &command]).output()
+        let mut c = Command::new("sh");
+        c.args(&["-c", &command]);
+        c
     };
+
+    if let Some(dir) = work_dir {
+        cmd.current_dir(dir);
+    }
+
+    let output = cmd.output();
 
     match output {
         Ok(output) => {
