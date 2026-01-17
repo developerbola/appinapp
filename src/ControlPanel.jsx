@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, Activity } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -12,6 +13,7 @@ import {
   Settings as SettingsIcon,
   LayoutDashboard,
   Code,
+  SquareMousePointer,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -129,14 +131,33 @@ const ControlPanel = () => {
       console.error("Failed to remove widget:", err);
     }
   };
+  const deleteWidgetSource = async (type) => {
+    const confirmed = await ask(
+      `Are you sure you want to permanently delete the widget "${type}"? \n\nThis will remove the .widget folder from your disk. This action cannot be undone.`,
+      {
+        title: "Delete Widget Source",
+        kind: "warning",
+      },
+    );
+
+    if (confirmed) {
+      try {
+        await invoke("delete_widget_source", {
+          folderPath: widgetFolder,
+          wType: type,
+        });
+        await scanWidgetFolder();
+      } catch (err) {
+        console.error("Failed to delete widget source:", err);
+      }
+    }
+  };
 
   const edit = async (type) => {
     try {
-      // Normalize folder path and construct widget path
       const base = widgetFolder.replace(/\/$/, "");
       const path = `${base}/${type}.widget`;
 
-      // Try to open index.js or index.jsx, fallback to the folder
       await invoke("execute_command", {
         command: `if [ -f "${path}/index.js" ]; then open "${path}/index.js"; elif [ -f "${path}/index.jsx" ]; then open "${path}/index.jsx"; else open "${path}"; fi`,
       });
@@ -178,7 +199,7 @@ const ControlPanel = () => {
               }`}
               onClick={() =>
                 setActive((prev) =>
-                  prev == "settings" ? "control" : "settings"
+                  prev == "settings" ? "control" : "settings",
                 )
               }
             >
@@ -284,7 +305,7 @@ const ControlPanel = () => {
                                 {
                                   label: "Delete",
                                   icon: <Trash className="w-4 h-4" />,
-                                  onClick: () => removeWidget(type),
+                                  onClick: () => deleteWidgetSource(type),
                                   danger: true,
                                 },
                                 {
@@ -349,7 +370,7 @@ const ControlPanel = () => {
                                   .split("")
                                   .reduce(
                                     (acc, char) => acc + char.charCodeAt(0),
-                                    0
+                                    0,
                                   );
                                 const variance = (idSeed % 20) / 100 + 0.9;
 
@@ -359,7 +380,7 @@ const ControlPanel = () => {
                                   variance
                                 ).toFixed(1);
                                 const mem = Math.floor(
-                                  stats.renderer.memory * share * variance
+                                  stats.renderer.memory * share * variance,
                                 );
 
                                 return `CPU: ${cpu}% • MEM: ${mem}MB`;
@@ -374,6 +395,16 @@ const ControlPanel = () => {
                               onClick={() => removeWidget(w.id)}
                             >
                               <CircleMinus className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              className={"border-none text-[#ffffff90]"}
+                              onClick={() => {
+                                invoke("open_devtools", { id: w.id });
+                              }}
+                            >
+                              <SquareMousePointer className="w-4 h-4" />
                             </Button>
                             <WindowSettings w={w} />
                           </div>

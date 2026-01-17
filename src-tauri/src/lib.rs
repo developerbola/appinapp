@@ -1,3 +1,5 @@
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use sysinfo::System;
 use tauri::{Emitter, Manager, State};
@@ -172,8 +174,22 @@ fn execute_command(command: String) -> Result<String, String> {
     }
 }
 
-use std::fs;
-use std::path::Path;
+#[tauri::command]
+fn open_devtools(app: tauri::AppHandle, id: String) {
+    if let Some(w) = app.get_webview_window(&format!("widget-{}", id)) {
+        w.open_devtools();
+    }
+}
+#[tauri::command]
+fn delete_widget_source(folder_path: String, w_type: String) -> Result<(), String> {
+    let path = Path::new(&folder_path).join(format!("{}.widget", w_type));
+    if path.exists() {
+        fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Widget source folder not found".to_string())
+    }
+}
 
 #[tauri::command]
 fn scan_widget_folder(folder_path: String) -> Result<Vec<String>, String> {
@@ -249,7 +265,9 @@ pub fn run() {
             is_launch_at_login_enabled,
             scan_widget_folder,
             read_widget_file,
-            execute_command
+            execute_command,
+            open_devtools,
+            delete_widget_source
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("control") {
