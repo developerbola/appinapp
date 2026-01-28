@@ -1,3 +1,4 @@
+import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
 export const widgetFolderAtom = atomWithStorage(
@@ -5,4 +6,4 @@ export const widgetFolderAtom = atomWithStorage(
   "/Users/devbola/Documents/appinapp/",
 );
 
-export const activeWidgetsAtom = atomWithStorage("active-widgets", []);
+export const activeWidgetsAtom = atom([]);

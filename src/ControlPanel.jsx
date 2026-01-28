@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Activity, useRef } from "react";
+import { useState, useEffect, useMemo, Activity } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ask } from "@tauri-apps/plugin-dialog";
@@ -34,13 +34,7 @@ const ControlPanel = () => {
   const [availableWidgetTypes, setAvailableWidgetTypes] = useState([]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [stats, setStats] = useState({
-    total: { cpu_usage: 0, memory_usage: 0 },
-    main: { cpu: 0, memory: 0 },
-    renderer: { cpu: 0, memory: 0 },
-  });
   const [active, setActive] = useState("control");
-  const isInitialMount = useRef(true);
 
   // Build widget types from scanned folder
   const widgetTypes = useMemo(() => {
@@ -86,29 +80,14 @@ const ControlPanel = () => {
 
   useEffect(() => {
     scanWidgetFolder();
-
-    if (isInitialMount.current) {
-      invoke("restore_widgets", { widgetList: widgets });
-      isInitialMount.current = false;
-    }
+    fetchWidgets();
 
     const unlisten = listen("widgets-update", (event) => {
       setWidgets(event.payload);
     });
 
-    const fetchStats = async () => {
-      try {
-        const res = await invoke("get_app_stats");
-        setStats(res);
-      } catch (err) {}
-    };
-
-    fetchStats();
-    const statsTimer = setInterval(fetchStats, 2000);
-
     return () => {
       unlisten.then((f) => f());
-      clearInterval(statsTimer);
     };
   }, [widgetFolder]);
 
@@ -265,7 +244,75 @@ const ControlPanel = () => {
               <div>
                 <div className="flex items-center gap-4 mb-1 mt-3">
                   <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                    all widgets
+                    Active
+                  </h2>
+                  <Separator className="flex-1 bg-white/5" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  {widgets.map((w) => {
+                    const meta = widgetTypes[w.w_type] || {
+                      label: "Unknown",
+                    };
+
+                    return (
+                      <div
+                        key={w.id}
+                        className="bg-[#ffffff10] border-l-2"
+                        style={{ borderLeftColor: "#ffffff90" }}
+                      >
+                        <div className="p-4 py-2 pr-2 flex items-center gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold tracking-tight w-fill max-w-[65%] whitespace-nowrap overflow-hidden">
+                                {meta.label}
+                              </h4>
+                              <span className="text-[9px] font-mono text-zinc-600 px-1.5 py-0.5 bg-[#00000020] rounded uppercase">
+                                PID: {w.id.substring(0, 8)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex">
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              className={"text-destructive border-none"}
+                              onClick={() => removeWidget(w.id)}
+                            >
+                              <CircleMinus className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              className={"border-none text-[#ffffff90]"}
+                              onClick={() => {
+                                invoke("open_devtools", { id: w.id });
+                              }}
+                            >
+                              <SquareMousePointer className="w-4 h-4" />
+                            </Button>
+                            <WindowSettings w={w} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {widgets.length === 0 && (
+                    <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/1">
+                      <p className="text-xs text-zinc-600 font-medium">
+                        NO ACTIVE PROCESSES
+                      </p>
+                      <p className="text-[12px] text-zinc-700 mt-1 tracking-tighter">
+                        Add widgets to begin
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-4 mb-1 mt-3">
+                  <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    All widgets
                   </h2>
                   <Separator className="flex-1 bg-white/5" />
                 </div>
@@ -337,111 +384,6 @@ const ControlPanel = () => {
                     ))}
                   </div>
                 )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-4 mb-1 mt-3">
-                  <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                    Active
-                  </h2>
-                  <Separator className="flex-1 bg-white/5" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  {widgets.map((w) => {
-                    const meta = widgetTypes[w.w_type] || {
-                      label: "Unknown",
-                    };
-
-                    return (
-                      <div
-                        key={w.id}
-                        className="bg-[#ffffff10] border-l-2"
-                        style={{ borderLeftColor: "#ffffff90" }}
-                      >
-                        <div className="p-4 py-2 pr-2 flex items-center gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold tracking-tight w-fill max-w-[65%] whitespace-nowrap overflow-hidden">
-                                {meta.label}
-                              </h4>
-                              <span className="text-[9px] font-mono text-zinc-600 px-1.5 py-0.5 bg-[#00000020] rounded uppercase">
-                                PID: {w.id.substring(0, 8)}
-                              </span>
-                            </div>
-                            <p className="text-[9px] text-[#ffffff30] font-mono italic">
-                              {(() => {
-                                const count = widgets.length || 1;
-                                const share = 1 / count;
-                                const idSeed = w.id
-                                  .split("")
-                                  .reduce(
-                                    (acc, char) => acc + char.charCodeAt(0),
-                                    0,
-                                  );
-                                const variance = (idSeed % 20) / 100 + 0.9;
-
-                                const cpu = (
-                                  stats.renderer.cpu *
-                                  share *
-                                  variance
-                                ).toFixed(1);
-                                const mem = Math.floor(
-                                  stats.renderer.memory * share * variance,
-                                );
-
-                                return `CPU: ${cpu}% • MEM: ${mem}MB`;
-                              })()}
-                            </p>
-                          </div>
-                          <div className="flex">
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              className={"text-destructive border-none"}
-                              onClick={() => removeWidget(w.id)}
-                            >
-                              <CircleMinus className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              className={"border-none text-[#ffffff90]"}
-                              onClick={() => {
-                                invoke("open_devtools", { id: w.id });
-                              }}
-                            >
-                              <SquareMousePointer className="w-4 h-4" />
-                            </Button>
-                            <WindowSettings w={w} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {widgets.length === 0 && (
-                    <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/1">
-                      <p className="text-xs text-zinc-600 font-medium">
-                        NO ACTIVE PROCESSES
-                      </p>
-                      <p className="text-[12px] text-zinc-700 mt-1 tracking-tighter">
-                        Add widgets to begin
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-3 border-t border-[#ffffff10] bg-black/40 backdrop-blur-md">
-              <div className="flex items-center justify-between text-[10px] text-neutral-600 font-mono tracking-tighter">
-                <div className="flex gap-2">
-                  MEMORY:
-                  <div className="text-white">{stats.total.memory_usage}MB</div>
-                  CPU:
-                  <div className="text-white">
-                    {stats.total.cpu_usage.toFixed(1)}%
-                  </div>
-                  usage of this app
-                </div>
               </div>
             </div>
           </div>

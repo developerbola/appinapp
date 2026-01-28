@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use sysinfo::System;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -18,9 +17,35 @@ struct WidgetConfig {
     visible_on_all_workspaces: bool,
 }
 
+fn get_config_path(app: &tauri::AppHandle) -> std::path::PathBuf {
+    app.path()
+        .app_config_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join("active_widgets.json")
+}
+
+fn save_widgets_to_disk(app: &tauri::AppHandle, widgets: &[WidgetConfig]) {
+    let path = get_config_path(app);
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string(widgets) {
+        let _ = fs::write(path, json);
+    }
+}
+
+fn load_widgets_from_disk(app: &tauri::AppHandle) -> Vec<WidgetConfig> {
+    let path = get_config_path(app);
+    if let Ok(json) = fs::read_to_string(path) {
+        if let Ok(widgets) = serde_json::from_str(&json) {
+            return widgets;
+        }
+    }
+    vec![]
+}
+
 struct AppState {
     widgets: Arc<Mutex<Vec<WidgetConfig>>>,
-    sys: Arc<Mutex<System>>,
 }
 
 fn create_widget_window(app: &tauri::AppHandle, config: &WidgetConfig) -> Result<(), String> {
@@ -98,6 +123,7 @@ fn add_widget(
     };
 
     widgets.push(config.clone());
+    save_widgets_to_disk(&app, &widgets);
     let _ = create_widget_window(&app, &config);
     let _ = app.emit("widgets-update", widgets.clone());
 }
@@ -106,6 +132,7 @@ fn add_widget(
 fn remove_widget(app: tauri::AppHandle, state: State<AppState>, id: String) {
     let mut widgets = state.widgets.lock().unwrap();
     widgets.retain(|w| w.id != id);
+    save_widgets_to_disk(&app, &widgets);
 
     if let Some(w) = app.get_webview_window(&format!("widget-{}", id)) {
         let _ = w.close();
@@ -119,6 +146,7 @@ fn update_widget_config(app: tauri::AppHandle, state: State<AppState>, config: W
     let mut widgets = state.widgets.lock().unwrap();
     if let Some(idx) = widgets.iter().position(|w| w.id == config.id) {
         widgets[idx] = config;
+        save_widgets_to_disk(&app, &widgets);
         let _ = app.emit("widgets-update", widgets.clone());
     }
 }
@@ -127,45 +155,12 @@ fn update_widget_config(app: tauri::AppHandle, state: State<AppState>, config: W
 fn restore_widgets(app: tauri::AppHandle, state: State<AppState>, widget_list: Vec<WidgetConfig>) {
     let mut widgets = state.widgets.lock().unwrap();
     *widgets = widget_list.clone();
+    save_widgets_to_disk(&app, &widgets);
 
     for config in &widget_list {
         let _ = create_widget_window(&app, config);
     }
     let _ = app.emit("widgets-update", widgets.clone());
-}
-
-#[tauri::command]
-fn get_app_stats(state: State<AppState>) -> serde_json::Value {
-    let mut sys = state.sys.lock().unwrap();
-    sys.refresh_all();
-
-    let mut main_cpu = 0.0;
-    let mut main_mem = 0;
-    let mut render_cpu = 0.0;
-    let mut render_mem = 0;
-
-    if let Ok(pid) = sysinfo::get_current_pid() {
-        if let Some(process) = sys.process(pid) {
-            main_cpu = process.cpu_usage();
-            main_mem = process.memory();
-        }
-
-        for (_, process) in sys.processes() {
-            if process.parent() == Some(pid) {
-                render_cpu += process.cpu_usage();
-                render_mem += process.memory();
-            }
-        }
-    }
-
-    serde_json::json!({
-        "main": { "cpu": main_cpu, "memory": main_mem / 1024 / 1024 },
-        "renderer": { "cpu": render_cpu, "memory": render_mem / 1024 / 1024 },
-        "total": {
-            "cpu_usage": main_cpu + render_cpu,
-            "memory_usage": (main_mem + render_mem) / 1024 / 1024
-        }
-    })
 }
 
 #[tauri::command]
@@ -306,9 +301,13 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
+            let loaded_widgets = load_widgets_from_disk(app.handle());
+            for config in &loaded_widgets {
+                let _ = create_widget_window(app.handle(), config);
+            }
+
             app.manage(AppState {
-                widgets: Arc::new(Mutex::new(vec![])),
-                sys: Arc::new(Mutex::new(System::new_all())),
+                widgets: Arc::new(Mutex::new(loaded_widgets)),
             });
 
             if let Some(window) = app.get_webview_window("control") {
@@ -383,7 +382,6 @@ pub fn run() {
             remove_widget,
             update_widget_config,
             restore_widgets,
-            get_app_stats,
             set_launch_at_login,
             is_launch_at_login_enabled,
             scan_widget_folder,
