@@ -1,10 +1,12 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
 
 const AlwaysOn = ({ w }) => {
   const window_name = `widget-${w.id}`;
-  const [alwaysOn, setAlwaysOn] = useState("none");
+  const [alwaysOn, setAlwaysOn] = useState(w.always_on_top ? "top" : "none");
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     const applyAlwaysOn = async () => {
@@ -16,18 +18,22 @@ const AlwaysOn = ({ w }) => {
           return;
         }
 
-        if (alwaysOn === "top") {
-          await appWindow.setAlwaysOnTop(true);
-        } else {
-          await appWindow.setAlwaysOnTop(false);
+        const isTop = alwaysOn === "top";
+        await appWindow.setAlwaysOnTop(isTop);
+
+        if (!isInitialMount.current) {
+          await invoke("update_widget_config", {
+            config: { ...w, always_on_top: isTop },
+          });
         }
+        isInitialMount.current = false;
       } catch (error) {
         console.error("Error setting always-on-top:", error);
       }
     };
 
     applyAlwaysOn();
-  }, [alwaysOn, window_name]);
+  }, [alwaysOn, window_name, w]);
 
   return (
     <div className="flex items-center justify-between px-3">

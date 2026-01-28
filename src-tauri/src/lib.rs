@@ -9,11 +9,62 @@ use tauri_plugin_autostart::MacosLauncher;
 struct WidgetConfig {
     id: String,
     w_type: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    always_on_top: bool,
+    acrylic: bool,
+    visible_on_all_workspaces: bool,
 }
 
 struct AppState {
     widgets: Arc<Mutex<Vec<WidgetConfig>>>,
     sys: Arc<Mutex<System>>,
+}
+
+fn create_widget_window(app: &tauri::AppHandle, config: &WidgetConfig) -> Result<(), String> {
+    let label = format!("widget-{}", config.id);
+
+    // If window already exists, don't create it again
+    if app.get_webview_window(&label).is_some() {
+        return Ok(());
+    }
+
+    let window = tauri::WebviewWindowBuilder::new(
+        app,
+        label.clone(),
+        tauri::WebviewUrl::App("index.html".into()),
+    )
+    .title(format!("Widget: {}", config.w_type))
+    .transparent(true)
+    .decorations(false)
+    .inner_size(config.width, config.height)
+    .position(config.x, config.y)
+    .resizable(false)
+    .shadow(false)
+    .always_on_top(config.always_on_top)
+    .visible_on_all_workspaces(config.visible_on_all_workspaces)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    {
+        use cocoa::appkit::NSWindow;
+        extern "C" {
+            pub fn CGWindowLevelForKey(key: i32) -> i32;
+        }
+
+        if let Ok(ns_window) = window.ns_window() {
+            let ns_window = ns_window as cocoa::base::id;
+            unsafe {
+                let level = CGWindowLevelForKey(3);
+                ns_window.setLevel_(level as i64);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -34,48 +85,20 @@ fn add_widget(
     let mut widgets = state.widgets.lock().unwrap();
     let id = uuid::Uuid::new_v4().to_string();
 
-    widgets.push(WidgetConfig {
+    let config = WidgetConfig {
         id: id.clone(),
         w_type: w_type.clone(),
-    });
+        x: x.unwrap_or(100.0),
+        y: y.unwrap_or(100.0),
+        width: width.unwrap_or(300.0),
+        height: height.unwrap_or(200.0),
+        always_on_top: false,
+        acrylic: false,
+        visible_on_all_workspaces: false,
+    };
 
-    let label = format!("widget-{}", id);
-    let win_width = width.unwrap_or(300.0);
-    let win_height = height.unwrap_or(200.0);
-    let win_x = x.unwrap_or(100.0);
-    let win_y = y.unwrap_or(100.0);
-
-    let window = tauri::WebviewWindowBuilder::new(
-        &app,
-        label.clone(),
-        tauri::WebviewUrl::App("index.html".into()),
-    )
-    .title(format!("Widget: {}", w_type))
-    .transparent(true)
-    .decorations(false)
-    .inner_size(win_width, win_height)
-    .position(win_x, win_y)
-    .resizable(false)
-    .shadow(false)
-    .build()
-    .unwrap();
-
-    #[cfg(target_os = "macos")]
-    {
-        use cocoa::appkit::NSWindow;
-        extern "C" {
-            pub fn CGWindowLevelForKey(key: i32) -> i32;
-        }
-
-        if let Ok(ns_window) = window.ns_window() {
-            let ns_window = ns_window as cocoa::base::id;
-            unsafe {
-                let level = CGWindowLevelForKey(3);
-                ns_window.setLevel_(level as i64);
-            }
-        }
-    }
-
+    widgets.push(config.clone());
+    let _ = create_widget_window(&app, &config);
     let _ = app.emit("widgets-update", widgets.clone());
 }
 
@@ -88,6 +111,26 @@ fn remove_widget(app: tauri::AppHandle, state: State<AppState>, id: String) {
         let _ = w.close();
     }
 
+    let _ = app.emit("widgets-update", widgets.clone());
+}
+
+#[tauri::command]
+fn update_widget_config(app: tauri::AppHandle, state: State<AppState>, config: WidgetConfig) {
+    let mut widgets = state.widgets.lock().unwrap();
+    if let Some(idx) = widgets.iter().position(|w| w.id == config.id) {
+        widgets[idx] = config;
+        let _ = app.emit("widgets-update", widgets.clone());
+    }
+}
+
+#[tauri::command]
+fn restore_widgets(app: tauri::AppHandle, state: State<AppState>, widget_list: Vec<WidgetConfig>) {
+    let mut widgets = state.widgets.lock().unwrap();
+    *widgets = widget_list.clone();
+
+    for config in &widget_list {
+        let _ = create_widget_window(&app, config);
+    }
     let _ = app.emit("widgets-update", widgets.clone());
 }
 
@@ -262,24 +305,12 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppState {
-            widgets: Arc::new(Mutex::new(vec![])),
-            sys: Arc::new(Mutex::new(System::new_all())),
-        })
-        .invoke_handler(tauri::generate_handler![
-            get_widgets,
-            add_widget,
-            remove_widget,
-            get_app_stats,
-            set_launch_at_login,
-            is_launch_at_login_enabled,
-            scan_widget_folder,
-            read_widget_file,
-            execute_command,
-            open_devtools,
-            delete_widget_source
-        ])
         .setup(|app| {
+            app.manage(AppState {
+                widgets: Arc::new(Mutex::new(vec![])),
+                sys: Arc::new(Mutex::new(System::new_all())),
+            });
+
             if let Some(window) = app.get_webview_window("control") {
                 let window_clone = window.clone();
                 window.on_window_event(move |event| {
@@ -288,6 +319,20 @@ pub fn run() {
                         let _ = window_clone.hide();
                     }
                 });
+
+                #[cfg(target_os = "macos")]
+                {
+                    use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+                    if let Ok(ns_window) = window.ns_window() {
+                        let ns_window = ns_window as cocoa::base::id;
+                        unsafe {
+                            let behavior = NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
+                                | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary
+                                | NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle;
+                            ns_window.setCollectionBehavior_(behavior);
+                        }
+                    }
+                }
             }
 
             #[cfg(target_os = "macos")]
@@ -332,6 +377,21 @@ pub fn run() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            get_widgets,
+            add_widget,
+            remove_widget,
+            update_widget_config,
+            restore_widgets,
+            get_app_stats,
+            set_launch_at_login,
+            is_launch_at_login_enabled,
+            scan_widget_folder,
+            read_widget_file,
+            execute_command,
+            open_devtools,
+            delete_widget_source
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

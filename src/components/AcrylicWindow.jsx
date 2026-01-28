@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
 
 const AcrylicWindow = ({ w }) => {
   const window_name = `widget-${w.id}`;
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(w.acrylic || false);
   const intervalRef = useRef(null);
+  const isInitialMount = useRef(true);
 
   const applyEffect = async (appWindow) => {
     try {
@@ -34,11 +36,18 @@ const AcrylicWindow = ({ w }) => {
     const manageEffect = async () => {
       try {
         const appWindow = await WebviewWindow.getByLabel(window_name);
-        
+
         if (!appWindow) {
           console.error("Window not found:", window_name);
           return;
         }
+
+        if (!isInitialMount.current) {
+          await invoke("update_widget_config", {
+            config: { ...w, acrylic: enabled },
+          });
+        }
+        isInitialMount.current = false;
 
         if (!enabled) {
           // Clear interval and effect when disabled
@@ -64,7 +73,6 @@ const AcrylicWindow = ({ w }) => {
             // Silently retry
           }
         }, 200);
-
       } catch (error) {
         console.error("Error managing effect:", error);
       }
@@ -79,7 +87,7 @@ const AcrylicWindow = ({ w }) => {
         intervalRef.current = null;
       }
     };
-  }, [enabled, window_name]);
+  }, [enabled, window_name, w]);
 
   const handleToggle = async (checked) => {
     setEnabled(checked);

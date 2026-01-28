@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Activity } from "react";
+import { useState, useEffect, useMemo, Activity, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ask } from "@tauri-apps/plugin-dialog";
@@ -22,14 +22,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAtom } from "jotai";
-import { widgetFolderAtom } from "@/atoms/atoms";
+import { widgetFolderAtom, activeWidgetsAtom } from "@/atoms/atoms";
 import WindowSettings from "./components/WindowSettings";
 import Uptime from "./components/Uptime";
 import Settings from "./sections/Settings";
 import Gallery from "./sections/Gallery";
 
 const ControlPanel = () => {
-  const [widgets, setWidgets] = useState([]);
+  const [widgets, setWidgets] = useAtom(activeWidgetsAtom);
   const [widgetFolder] = useAtom(widgetFolderAtom);
   const [availableWidgetTypes, setAvailableWidgetTypes] = useState([]);
 
@@ -40,6 +40,7 @@ const ControlPanel = () => {
     renderer: { cpu: 0, memory: 0 },
   });
   const [active, setActive] = useState("control");
+  const isInitialMount = useRef(true);
 
   // Build widget types from scanned folder
   const widgetTypes = useMemo(() => {
@@ -85,7 +86,11 @@ const ControlPanel = () => {
 
   useEffect(() => {
     scanWidgetFolder();
-    fetchWidgets();
+
+    if (isInitialMount.current) {
+      invoke("restore_widgets", { widgetList: widgets });
+      isInitialMount.current = false;
+    }
 
     const unlisten = listen("widgets-update", (event) => {
       setWidgets(event.payload);

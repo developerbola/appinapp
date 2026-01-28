@@ -2,32 +2,23 @@ import { useState, useEffect } from "react";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
 
 const AllWorkspaces = ({ w }) => {
   const window_name = `widget-${w.id}`;
-  const [enabled, setEnabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const initializeState = async () => {
-      try {
-        const webview = await WebviewWindow.getByLabel(window_name);
-        const isVisible = await webview.isVisibleOnAllWorkspaces();
-        setEnabled(isVisible);
-      } catch (error) {
-        console.error("Failed to get workspace visibility:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    initializeState();
-  }, []);
+  const [enabled, setEnabled] = useState(w.visible_on_all_workspaces || false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleToggle = async (checked) => {
     setEnabled(checked);
     try {
       const webview = await WebviewWindow.getByLabel(window_name);
-      await webview.setVisibleOnAllWorkspaces(checked);
+      if (webview) {
+        await webview.setVisibleOnAllWorkspaces(checked);
+      }
+      await invoke("update_widget_config", {
+        config: { ...w, visible_on_all_workspaces: checked },
+      });
     } catch (error) {
       console.error("Failed to set workspace visibility:", error);
       setEnabled(!checked);
