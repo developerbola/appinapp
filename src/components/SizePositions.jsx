@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { Input } from "./ui/input";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { invoke } from "@tauri-apps/api/core";
 
 const SizePositions = ({ w }) => {
   const window_name = `widget-${w.id}`;
@@ -91,34 +90,21 @@ const SizePositions = ({ w }) => {
           return;
         }
 
-        const { h, w: widthStr, x: xStr, y: yStr } = positions;
+        const { h, w: width, x, y } = positions;
 
-        let updatedConfig = { ...w };
-        let changed = false;
-
-        if (h && widthStr) {
+        if (h && width) {
           const height = parseInt(h);
-          const widthNum = parseInt(widthStr);
+          const widthNum = parseInt(width);
           if (height > 0 && widthNum > 0) {
             await appWindow.setSize(new LogicalSize(widthNum, height));
-            updatedConfig.width = widthNum;
-            updatedConfig.height = height;
-            changed = true;
           }
         }
-        if (xStr !== "" && yStr !== "") {
-          const xPos = parseInt(xStr);
-          const yPos = parseInt(yStr);
+        if (x !== "" && y !== "") {
+          const xPos = parseInt(x);
+          const yPos = parseInt(y);
           if (!isNaN(xPos) && !isNaN(yPos)) {
             await appWindow.setPosition(new LogicalPosition(xPos, yPos));
-            updatedConfig.x = xPos;
-            updatedConfig.y = yPos;
-            changed = true;
           }
-        }
-
-        if (changed) {
-          await invoke("update_widget_config", { config: updatedConfig });
         }
       } catch (error) {
         console.error("Error setting window size/position:", error);
@@ -130,7 +116,7 @@ const SizePositions = ({ w }) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [positions, window_name, w]);
+  }, [positions, window_name]);
 
   return (
     <div className="grid grid-cols-2 gap-2 w-[90%]">
